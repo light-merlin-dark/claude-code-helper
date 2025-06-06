@@ -2,9 +2,10 @@ import fs from 'fs';
 import path from 'path';
 import os from 'os';
 import chalk from 'chalk';
+import readline from 'readline';
 import { CommandSpec, CommandResult, RuntimeContext } from '../shared/core';
 import { ConfigNotFoundError, BackupNotFoundError, InvalidCommandError } from '../shared/errors';
-import { logger } from '../common';
+import { logger } from '../utils/logger';
 
 interface ClaudeConfig {
   numStartups?: number;
@@ -280,6 +281,100 @@ async function listCommands(testMode: boolean = false): Promise<void> {
   });
 }
 
+async function showConfig(testMode: boolean = false): Promise<void> {
+  const configPath = getConfigPath(testMode);
+  const baseCommandsPath = getBaseCommandsPath(testMode);
+  const backupsDir = getBackupsDir(testMode);
+  
+  try {
+    const config = await loadClaudeConfig(testMode);
+    const baseCommands = await loadBaseCommands(testMode);
+    
+    console.log(chalk.cyan('\nClaude Code Helper Configuration\n'));
+    
+    // Show base commands
+    console.log(chalk.green('Base Commands:'));
+    if (baseCommands.length === 0) {
+      console.log(chalk.gray('  (none configured)'));
+    } else {
+      baseCommands.forEach((cmd, index) => {
+        console.log(`  ${chalk.gray(`${index + 1}.`)} ${cmd}`);
+      });
+    }
+    
+    // Show project count
+    console.log('\n' + chalk.green('Projects:'));
+    const projectCount = config.projects ? Object.keys(config.projects).length : 0;
+    console.log(`  Total projects configured: ${chalk.yellow(projectCount)}`);
+    
+    // Show file paths
+    console.log('\n' + chalk.green('Configuration Files:'));
+    console.log(`  Base Commands: ${chalk.gray(baseCommandsPath)}`);
+    console.log(`  Claude Config: ${chalk.gray(configPath)}`);
+    console.log(`  Backups Dir:   ${chalk.gray(backupsDir)}`);
+    
+    // Show backup files if any exist
+    if (fs.existsSync(backupsDir)) {
+      const backupFiles = fs.readdirSync(backupsDir).filter(f => f.endsWith('.json'));
+      if (backupFiles.length > 0) {
+        console.log('\n' + chalk.green('Available Backups:'));
+        backupFiles.forEach(file => {
+          const backupPath = path.join(backupsDir, file);
+          const stats = fs.statSync(backupPath);
+          const date = stats.mtime.toLocaleDateString();
+          console.log(`  ${chalk.yellow(file)} ${chalk.gray(`(${date})`)}`);
+          console.log(`    ${chalk.gray(backupPath)}`);
+        });
+      }
+    }
+  } catch (error) {
+    if (error instanceof ConfigNotFoundError) {
+      logger.warning('Claude config not found');
+      console.log(`\nExpected location: ${chalk.gray(configPath)}`);
+    } else {
+      throw error;
+    }
+  }
+}
+
+async function showChangelog(): Promise<void> {
+  const changelogPath = path.join(__dirname, '../../CHANGELOG.md');
+  
+  if (!fs.existsSync(changelogPath)) {
+    logger.warning('Changelog file not found');
+    return;
+  }
+  
+  const content = fs.readFileSync(changelogPath, 'utf8');
+  const lines = content.split('\n');
+  
+  console.log(chalk.cyan('\nClaude Code Helper - Recent Changes\n'));
+  
+  // Parse and display changelog entries (show first 3 versions)
+  let versionCount = 0;
+  let inVersion = false;
+  
+  for (const line of lines) {
+    if (line.startsWith('## [')) {
+      versionCount++;
+      if (versionCount > 3) break;
+      inVersion = true;
+      const versionMatch = line.match(/## \[([^\]]+)\] - (.+)/);
+      if (versionMatch) {
+        console.log(chalk.yellow(`v${versionMatch[1]}`) + chalk.gray(` (${versionMatch[2]})`));
+      }
+    } else if (inVersion && line.startsWith('### ')) {
+      console.log('\n' + chalk.green(line.substring(4)));
+    } else if (inVersion && line.startsWith('- ')) {
+      console.log('  ' + line);
+    } else if (inVersion && line.trim() === '') {
+      console.log('');
+    }
+  }
+  
+  console.log('\n' + chalk.gray('View full changelog at: https://github.com/light-merlin-dark/claude-code-helper/releases'));
+}
+
 async function addCommand(command: string, testMode: boolean = false): Promise<void> {
   const commands = await loadBaseCommands(testMode);
 
@@ -325,23 +420,180 @@ async function removeCommand(index: number, force: boolean = false, testMode: bo
   logger.success(`Removed command: ${commandToRemove}`);
 }
 
-const claude: CommandSpec<any> = {
-  description: 'Claude configuration helper commands',
-  help: `Claude Code Helper - Manage command permissions across your Claude Code projects
+interface CommandFrequency {
+  command: string;
+  count: number;
+  projects: string[];
+}
+
+async function promptUser(question: string): Promise<string> {
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout
+  });
+
+  return new Promise((resolve) => {
+    rl.question(question, (answer) => {
+      rl.close();
+      resolve(answer.trim().toLowerCase());
+    });
+  });
+}
+
+async function suggestCommands(testMode: boolean = false): Promise<void> {
+  const config = await loadClaudeConfig(testMode);
+  const baseCommands = await loadBaseCommands(testMode);
+
+  if (!config.projects || Object.keys(config.projects).length === 0) {
+    logger.warning('No projects found in Claude config');
+    return;
+  }
+
+  // Count frequency of each command across projects
+  const commandMap = new Map<string, CommandFrequency>();
+  let totalProjects = 0;
+
+  for (const [projectPath, project] of Object.entries(config.projects)) {
+    totalProjects++;
+    const seenInProject = new Set<string>();
+
+    for (const cmd of project.allowedTools || []) {
+      // Normalize command (remove Bash() wrapper)
+      const normalizedCmd = cmd.startsWith('Bash(') && cmd.endsWith(')') 
+        ? cmd.slice(5, -1) 
+        : cmd;
+      
+      // Skip if already in base commands
+      if (baseCommands.includes(normalizedCmd)) continue;
+      
+      // Skip if we've already seen this command in this project
+      if (seenInProject.has(normalizedCmd)) continue;
+      seenInProject.add(normalizedCmd);
+
+      // Update frequency map
+      if (!commandMap.has(normalizedCmd)) {
+        commandMap.set(normalizedCmd, { 
+          command: normalizedCmd, 
+          count: 0, 
+          projects: [] 
+        });
+      }
+      const freq = commandMap.get(normalizedCmd)!;
+      freq.count++;
+      freq.projects.push(path.basename(projectPath));
+    }
+  }
+
+  // Sort by frequency and filter
+  const suggestions = Array.from(commandMap.values())
+    .filter(f => f.count >= 2) // Only suggest if used in 2+ projects
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 10); // Limit to top 10 suggestions
+
+  if (suggestions.length === 0) {
+    logger.info(`Analyzed ${totalProjects} project(s)`);
+    logger.success('No frequently used commands found that aren\'t already in your base set');
+    return;
+  }
+
+  // Display suggestions
+  console.log(chalk.cyan(`\nLooking for commonly used commands across ${totalProjects} projects...\n`));
+  console.log(chalk.green(`Found ${suggestions.length} command(s) you use frequently:\n`));
+
+  suggestions.forEach((cmd, idx) => {
+    const projectList = cmd.projects.slice(0, 3).join(', ');
+    const moreProjects = cmd.projects.length > 3 ? ` (+${cmd.projects.length - 3} more)` : '';
+    console.log(`  ${chalk.yellow(`${idx + 1}.`)} ${chalk.white(cmd.command)} ${chalk.gray(`(used in ${cmd.count} projects)`)} ${chalk.gray(`${projectList}${moreProjects}`)}`);
+  });
+
+  console.log('\n' + chalk.cyan('Select commands to add:'));
+  console.log(`  ${chalk.gray('[a]')} Add all`);
+  console.log(`  ${chalk.gray('[1-' + suggestions.length + ']')} Add specific (comma-separated)`);
+  console.log(`  ${chalk.gray('[n]')} Skip\n`);
+
+  const answer = await promptUser('Your choice: ');
+
+  if (answer === 'n' || answer === 'skip' || answer === '') {
+    logger.info('Skipped adding commands');
+    return;
+  }
+
+  let commandsToAdd: CommandFrequency[] = [];
+
+  if (answer === 'a' || answer === 'all') {
+    commandsToAdd = suggestions;
+  } else {
+    // Parse comma-separated numbers
+    const indices = answer.split(',')
+      .map(s => parseInt(s.trim(), 10) - 1)
+      .filter(i => i >= 0 && i < suggestions.length);
+    
+    if (indices.length === 0) {
+      logger.warning('No valid selections made');
+      return;
+    }
+
+    commandsToAdd = indices.map(i => suggestions[i]);
+  }
+
+  // Add selected commands
+  const commands = await loadBaseCommands(testMode);
+  let addedCount = 0;
+
+  for (const cmd of commandsToAdd) {
+    if (!commands.includes(cmd.command)) {
+      commands.push(cmd.command);
+      logger.success(`Added: ${cmd.command}`);
+      addedCount++;
+    }
+  }
+
+  if (addedCount > 0) {
+    await saveBaseCommands(commands, testMode);
+    console.log('');
+    logger.success(`Added ${addedCount} command(s) to your base set`);
+    
+    // Ask if they want to apply to all projects now
+    const applyNow = await promptUser('Apply these commands to all projects now? (y/n): ');
+    if (applyNow === 'y' || applyNow === 'yes') {
+      await ensureCommands(testMode);
+    } else {
+      logger.info('Run ' + chalk.cyan('cch -ec') + ' to apply these to all projects');
+    }
+  }
+}
+
+function generateHelpText(testMode: boolean = false): string {
+  const baseCommandsPath = getBaseCommandsPath(testMode);
+  const baseCommandsExist = fs.existsSync(baseCommandsPath);
+  
+  let helpText = `Claude Code Helper - Manage command permissions across your Claude Code projects
 
 Usage: cch [options]
 
-Quick Start:
+`;
+
+  if (!baseCommandsExist) {
+    helpText += chalk.yellow('New user? ') + 'Start by discovering your common commands:\n';
+    helpText += '  ' + chalk.cyan('cch -sc') + '                    # Discover frequently used commands\n\n';
+  }
+  
+  helpText += `Quick Start:
   cch -lc                    # See your base commands
   cch -ac "docker:*"         # Add a command to your base set
   cch -ec                    # Apply base commands to all projects
 
 Managing Commands:
   -lc, --list-commands       List your base commands
+  -sc, --suggest-commands    Suggest frequently used commands
   -ac, --add-command         Add a command to base set
   -dc, --delete-command      Remove a command by number
   -ec, --ensure-commands     Apply base commands to all projects
   -nc, --normalize-commands  Clean up command formatting
+
+Configuration:
+  -c, --config               View current configuration and file paths
+  --changelog                View recent changes
 
 Backup & Restore:
   -bc, --backup-config       Create a backup of Claude config
@@ -362,7 +614,17 @@ Examples:
   cch -ac "pytest:*"         # Add pytest to all projects
   cch -ec --test             # Preview what will change
   cch -ec                    # Apply changes
-  cch -bc -n before-update   # Create a named backup`,
+  cch -bc -n before-update   # Create a named backup
+
+View recent changes:
+  cch --changelog`;
+  
+  return helpText;
+}
+
+const claude: CommandSpec<any> = {
+  description: 'Claude configuration helper commands',
+  help: '', // Will be set dynamically
 
   async execute(
     args: string[],
@@ -378,12 +640,17 @@ Examples:
       ec: ec,
       'list-commands': listCommands_,
       lc: lc,
+      'suggest-commands': suggestCommands_,
+      sc: sc,
       'add-command': addCommand_,
       ac: ac,
       'delete-command': deleteCommand_,
       dc: dc,
       'normalize-commands': normalizeCommands_,
       nc: nc,
+      'config': config_,
+      c: c,
+      'changelog': changelog_,
       n: backupName,
       name: name,
       test: testMode,
@@ -402,9 +669,12 @@ Examples:
       const isRestore = restoreConfig_ || rc;
       const isEnsure = ensureCommands_ || ec;
       const isList = listCommands_ || lc;
+      const isSuggest = suggestCommands_ || sc;
       const isAdd = addCommand_ || ac;
       const isDelete = deleteCommand_ || dc;
       const isNormalize = normalizeCommands_ || nc;
+      const isConfig = config_ || c;
+      const isChangelog = changelog_;
       const backupNameValue = backupName || name;
       const isForce = force || f;
 
@@ -416,6 +686,8 @@ Examples:
         await ensureCommands(testMode);
       } else if (isList) {
         await listCommands(testMode);
+      } else if (isSuggest) {
+        await suggestCommands(testMode);
       } else if (isAdd) {
         const command = typeof isAdd === 'string' ? isAdd : typeof ac === 'string' ? ac : '';
         if (!command) {
@@ -431,7 +703,13 @@ Examples:
         await removeCommand(index, isForce, testMode);
       } else if (isNormalize) {
         await normalizeCommands(false, testMode);
+      } else if (isConfig) {
+        await showConfig(testMode);
+      } else if (isChangelog) {
+        await showChangelog();
       } else {
+        // Set help text dynamically
+        this.help = generateHelpText(testMode);
         console.log(this.help);
       }
 

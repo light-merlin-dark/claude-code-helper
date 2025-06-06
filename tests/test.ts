@@ -285,5 +285,80 @@ runner.test('Should handle missing backup file', () => {
   }
 });
 
+// Test: Suggest commands with no projects
+runner.test('Should handle suggest commands with no projects', () => {
+  // Clear projects from config
+  const config = readTestConfig();
+  config.projects = {};
+  fs.writeFileSync(TEST_CONFIG_PATH, JSON.stringify(config, null, 2));
+  
+  const output = runCommand('--suggest-commands --test');
+  if (!output.includes('No projects found')) {
+    throw new Error('Empty projects not handled correctly in suggest commands');
+  }
+});
+
+// Test: Suggest commands with common commands
+runner.test('Should find common commands across projects', () => {
+  // Set up test data with common commands
+  const config = readTestConfig();
+  
+  // Add a common command to multiple projects
+  config.projects['/test/project1'].allowedTools.push('Bash(docker:*)');
+  config.projects['/test/project2'].allowedTools.push('Bash(docker:*)');
+  config.projects['/test/project3'].allowedTools.push('Bash(docker:*)');
+  
+  // Add another common command
+  config.projects['/test/project1'].allowedTools.push('Bash(yarn:*)');
+  config.projects['/test/project2'].allowedTools.push('Bash(yarn:*)');
+  
+  fs.writeFileSync(TEST_CONFIG_PATH, JSON.stringify(config, null, 2));
+  
+  // Provide 'n' as input to skip adding commands
+  const output = execSync(`echo n | ${CLI_CMD} --suggest-commands --test`, { encoding: 'utf8' });
+  if (!output.includes('Looking for commonly used commands') || 
+      !output.includes('docker:*') ||
+      !output.includes('used in 3 projects')) {
+    throw new Error('Common commands not detected correctly');
+  }
+});
+
+// Test: View config command
+runner.test('Should display configuration with -c/--config', () => {
+  const output = runCommand('-c --test');
+  if (!output.includes('Claude Code Helper Configuration') || 
+      !output.includes('Base Commands:') ||
+      !output.includes('Configuration Files:')) {
+    throw new Error('Config display not working correctly');
+  }
+});
+
+// Test: Changelog command
+runner.test('Should display changelog with --changelog', () => {
+  const output = runCommand('--changelog');
+  if (!output.includes('Claude Code Helper - Recent Changes') || 
+      !output.includes('v1.0.4')) {
+    throw new Error('Changelog display not working correctly');
+  }
+});
+
+// Test: Help text changes for new users
+runner.test('Should show onboarding text for new users', () => {
+  // Remove base commands file and its directory to simulate new user
+  if (fs.existsSync(TEST_BASE_COMMANDS_PATH)) {
+    fs.unlinkSync(TEST_BASE_COMMANDS_PATH);
+  }
+  const baseDir = path.dirname(TEST_BASE_COMMANDS_PATH);
+  if (fs.existsSync(baseDir)) {
+    fs.rmSync(baseDir, { recursive: true });
+  }
+  
+  const output = runCommand('--test');
+  if (!output.includes('New user?') || 
+      !output.includes('Start by discovering your common commands')) {
+    throw new Error('New user onboarding text not shown');
+  }
+});
+
 // Run all tests
 runner.run();

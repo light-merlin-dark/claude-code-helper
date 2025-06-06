@@ -1,17 +1,3 @@
-import chalk from 'chalk';
-
-export const logger = {
-  info: (message: string) => console.log(message),
-  success: (message: string) => console.log(chalk.green('✓'), message),
-  warning: (message: string) => console.log(chalk.yellow(message)),
-  error: (message: string) => console.error(chalk.red('Error:'), message),
-  debug: (message: string) => {
-    if (process.env.DEBUG) {
-      console.log(chalk.gray('[DEBUG]'), message);
-    }
-  }
-};
-
 export function parseArgs(args: string[]): {
   command?: string;
   commandArgs: string[];
@@ -38,7 +24,7 @@ export function parseArgs(args: string[]): {
       const flagStr = arg.slice(1);
       
       // Check if this is a multi-character flag (like -nc, -bc, etc)
-      if (flagStr.length === 2 && ['bc', 'rc', 'ec', 'lc', 'ac', 'dc', 'nc'].includes(flagStr)) {
+      if (flagStr.length === 2 && ['bc', 'rc', 'ec', 'lc', 'sc', 'ac', 'dc', 'nc'].includes(flagStr)) {
         const nextArg = args[i + 1];
         if (nextArg && !nextArg.startsWith('-')) {
           options[flagStr] = nextArg;

@@ -21,6 +21,7 @@ npm i -g @light-merlin-dark/claude-code-helper
 ## Features
 
 - **Command Permissions Management**: Define and apply command permissions across all your Claude Code projects
+- **Smart Suggestions**: Discovers commands you use frequently and suggests adding them to your base set
 - **Backup/Restore**: Save snapshots of your Claude configuration before making changes
 - **Bulk Updates**: Apply your base command set to all projects at once
 - **Smart Deduplication**: Automatically removes duplicate commands from project configurations
@@ -37,6 +38,11 @@ cch [options]
 List your current base commands:
 ```bash
 cch --list-commands
+```
+
+Discover frequently used commands:
+```bash
+cch --suggest-commands      # Analyzes your projects and suggests common commands
 ```
 
 Add a new command to your base set:
@@ -73,6 +79,17 @@ cch --restore-config --name pre-update   # Restore specific backup
 
 ### Utility Commands
 
+View your configuration:
+```bash
+cch --config                       # View current config and file paths
+cch -c                             # Short alias
+```
+
+Check version history:
+```bash
+cch --changelog                    # View recent changes and updates
+```
+
 Normalize command formatting:
 ```bash
 cch --normalize-commands           # Clean up command formatting
@@ -85,12 +102,15 @@ For convenience, all commands have short aliases:
 | Long Form | Short Alias | Description |
 |-----------|-------------|-------------|
 | `--list-commands` | `-lc` | List base commands |
+| `--suggest-commands` | `-sc` | Suggest frequently used commands |
 | `--add-command` | `-ac` | Add a command |
 | `--delete-command` | `-dc` | Delete a command |
 | `--ensure-commands` | `-ec` | Apply to all projects |
 | `--backup-config` | `-bc` | Create backup |
 | `--restore-config` | `-rc` | Restore backup |
 | `--normalize-commands` | `-nc` | Normalize formatting |
+| `--config` | `-c` | View configuration |
+| `--changelog` | - | View version history |
 | `--name` | `-n` | Specify backup name |
 | `--force` | `-f` | Skip confirmations |
 
@@ -148,6 +168,35 @@ cch --add-command "cargo:*"
 # Apply immediately to all projects
 cch --ensure-commands
 ```
+
+### Discovering Common Commands
+
+```bash
+# Let the tool analyze your projects
+cch --suggest-commands
+
+# It will show commands used in multiple projects:
+# 1. docker:*         (used in 8 projects)
+# 2. yarn:*           (used in 6 projects)
+# 3. pytest:*         (used in 3 projects)
+
+# Select which ones to add to your base set
+```
+
+## Features in Detail
+
+### Configuration Viewer
+The `--config` command shows you:
+- Your current base commands
+- Total number of configured projects
+- All configuration file paths (clickable in many terminals)
+- Available backup files with creation dates
+
+### Version History
+The `--changelog` command displays:
+- Recent version updates
+- New features and improvements
+- Bug fixes and changes
 
 ## How It Works
 
