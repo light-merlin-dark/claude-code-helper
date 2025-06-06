@@ -12,22 +12,22 @@ import { ConfigNotFoundError } from '../../shared/errors';
 
 export async function showConfig(testMode: boolean = false): Promise<void> {
   const configPath = getConfigPath(testMode);
-  const baseCommandsPath = getBaseCommandsPath(testMode);
+  const permissionsPath = getBaseCommandsPath(testMode);
   const backupsDir = getBackupsDir(testMode);
   
   try {
     const config = await loadClaudeConfig(testMode);
-    const baseCommands = await loadBaseCommands(testMode);
+    const permissions = await loadBaseCommands(testMode);
     
     console.log(chalk.cyan('\nClaude Code Helper Configuration\n'));
     
-    // Show base commands
-    console.log(chalk.green('Base Commands:'));
-    if (baseCommands.length === 0) {
+    // Show permissions
+    console.log(chalk.green('Permissions:'));
+    if (permissions.length === 0) {
       console.log(chalk.gray('  (none configured)'));
     } else {
-      baseCommands.forEach((cmd, index) => {
-        console.log(`  ${chalk.gray(`${index + 1}.`)} ${cmd}`);
+      permissions.forEach((perm, index) => {
+        console.log(`  ${chalk.gray(`${index + 1}.`)} ${perm}`);
       });
     }
     
@@ -38,10 +38,10 @@ export async function showConfig(testMode: boolean = false): Promise<void> {
     
     // Show file paths
     console.log('\n' + chalk.green('Configuration Files:'));
-    console.log(`  Base Commands: ${chalk.gray(baseCommandsPath)}`);
+    console.log(`  Permissions:   ${chalk.gray(permissionsPath)}`);
     console.log(`  Claude Config: ${chalk.gray(configPath)}`);
     console.log(`  Backups:       ${chalk.gray(backupsDir)}`);
-    console.log(`  CCH Directory: ${chalk.gray(path.dirname(baseCommandsPath))}`);
+    console.log(`  Preferences:   ${chalk.gray(path.join(path.dirname(permissionsPath), 'preferences.json'))}`);
     
     // Show backup files if any exist
     if (fs.existsSync(backupsDir)) {

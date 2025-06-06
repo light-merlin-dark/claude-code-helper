@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { getConfigPath, getBackupsDir, getBaseCommandsPath, getOldBackupsDir } from './paths';
+import { getConfigPath, getBackupsDir, getPermissionsPath, getOldBackupsDir } from './paths';
 import { DEFAULT_BASE_COMMANDS } from './defaults';
 import { ConfigNotFoundError } from '../shared/errors';
 import { logger } from '../utils/logger';
@@ -50,20 +50,20 @@ export async function saveClaudeConfig(config: ClaudeConfig | TestConfig, testMo
 }
 
 export async function loadBaseCommands(testMode: boolean = false): Promise<string[]> {
-  const commandsPath = getBaseCommandsPath(testMode);
+  const permissionsPath = getPermissionsPath(testMode);
   
-  if (!fs.existsSync(commandsPath)) {
+  if (!fs.existsSync(permissionsPath)) {
     return [];
   }
 
-  const content = fs.readFileSync(commandsPath, 'utf8');
+  const content = fs.readFileSync(permissionsPath, 'utf8');
   return JSON.parse(content);
 }
 
 export async function saveBaseCommands(commands: string[], testMode: boolean = false): Promise<void> {
   await ensureDataDir(testMode);
-  const commandsPath = getBaseCommandsPath(testMode);
-  fs.writeFileSync(commandsPath, JSON.stringify(commands, null, 2));
+  const permissionsPath = getPermissionsPath(testMode);
+  fs.writeFileSync(permissionsPath, JSON.stringify(commands, null, 2));
 }
 
 export async function ensureBackupsDir(testMode: boolean = false): Promise<void> {
@@ -130,19 +130,19 @@ export async function migrateOldBackups(testMode: boolean = false): Promise<void
 }
 
 export async function ensureDataDir(testMode: boolean = false): Promise<void> {
-  const commandsPath = getBaseCommandsPath(testMode);
-  const dataDir = path.dirname(commandsPath);
+  const permissionsPath = getPermissionsPath(testMode);
+  const dataDir = path.dirname(permissionsPath);
   if (!fs.existsSync(dataDir)) {
     fs.mkdirSync(dataDir, { recursive: true });
   }
 }
 
 export async function ensureBaseCommandsExist(testMode: boolean = false): Promise<boolean> {
-  const commandsPath = getBaseCommandsPath(testMode);
+  const permissionsPath = getPermissionsPath(testMode);
   const backupsDir = getBackupsDir(testMode);
   const firstRunBackupPath = path.join(backupsDir, 'first-run-backup.json');
   
-  if (!fs.existsSync(commandsPath)) {
+  if (!fs.existsSync(permissionsPath)) {
     // First time running - create an automatic backup
     try {
       const configPath = getConfigPath(testMode);
@@ -164,8 +164,8 @@ export async function ensureBaseCommandsExist(testMode: boolean = false): Promis
     
     await saveBaseCommands(DEFAULT_BASE_COMMANDS, testMode);
     if (!testMode) {
-      logger.success('Created base commands file with defaults');
-      logger.info(`  Commands saved to: ${commandsPath}`);
+      logger.success('Created permissions file with defaults');
+      logger.info(`  Permissions saved to: ${permissionsPath}`);
     }
     return true;
   }

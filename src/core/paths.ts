@@ -21,8 +21,13 @@ export function getOldBackupsDir(testMode: boolean = false): string {
   return path.join(getBaseDir(testMode), '.claude-backups');
 }
 
+export function getPermissionsPath(testMode: boolean = false): string {
+  return path.join(getBaseDir(testMode), '.cch', 'permissions.json');
+}
+
+// Keep the old function name for now to avoid breaking changes
 export function getBaseCommandsPath(testMode: boolean = false): string {
-  return path.join(getBaseDir(testMode), '.cch', 'base-commands.json');
+  return getPermissionsPath(testMode);
 }
 
 export const DEFAULT_BACKUP_NAME = 'claude-backup.json';

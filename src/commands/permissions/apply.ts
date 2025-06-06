@@ -1,14 +1,26 @@
 import { loadBaseCommands, loadClaudeConfig, saveClaudeConfig } from '../../core/config';
 import { logger } from '../../utils/logger';
+import { 
+  formatForConfig, 
+  mergePermissions,
+  deduplicatePermissions 
+} from '../../core/permissions';
+import { 
+  trackProjectChange, 
+  createChangeSummary, 
+  displayChangeSummary,
+  ProjectChange
+} from '../../utils/changes';
+import { getPreference } from '../../core/preferences';
 
 /**
  * Apply permissions to all projects
  */
-
-export async function ensureCommands(testMode: boolean = false): Promise<void> {
-  const baseCommands = await loadBaseCommands(testMode);
-  if (baseCommands.length === 0) {
-    logger.warning('No base commands configured');
+export async function applyPermissions(testMode: boolean = false, dryRun: boolean = false): Promise<void> {
+  const basePermissions = await loadBaseCommands(testMode);
+  if (basePermissions.length === 0) {
+    logger.warning('No permissions configured');
+    logger.info('Use "cch -add <permission>" to add your first permission');
     return;
   }
 
@@ -19,47 +31,53 @@ export async function ensureCommands(testMode: boolean = false): Promise<void> {
     return;
   }
 
-  let updatedCount = 0;
-  let totalDuplicatesRemoved = 0;
+  // Get preferences
+  const showChangeSummary = await getPreference('permissions.showChangeSummary', true, testMode);
+  const verboseLogging = await getPreference('permissions.verboseLogging', false, testMode);
+
+  // Track changes for all projects
+  const projectChanges: ProjectChange[] = [];
+  
+  // Format base permissions for Claude config
+  const formattedBasePermissions = formatForConfig(basePermissions);
 
   for (const [projectPath, project] of Object.entries(config.projects)) {
     if (!project.allowedTools) {
       project.allowedTools = [];
     }
 
-    const formattedCommands = baseCommands.map(cmd => {
-      if (cmd.startsWith('Bash(') && cmd.endsWith(')')) {
-        return cmd;
-      }
-      return `Bash(${cmd})`;
-    });
-
-    const originalLength = project.allowedTools.length;
-    const uniqueExistingTools = Array.from(new Set(project.allowedTools));
-    const existingToolsWithoutBase = uniqueExistingTools.filter(
-      tool => !formattedCommands.includes(tool)
-    );
-    const newTools = [...formattedCommands, ...existingToolsWithoutBase];
-
-    if (JSON.stringify(newTools) !== JSON.stringify(project.allowedTools)) {
-      const duplicatesRemoved = originalLength - uniqueExistingTools.length;
-      if (duplicatesRemoved > 0) {
-        logger.warning(`  Removed ${duplicatesRemoved} duplicate(s) from ${projectPath}`);
-        totalDuplicatesRemoved += duplicatesRemoved;
-      }
-
-      project.allowedTools = newTools;
-      updatedCount++;
+    const oldPermissions = [...project.allowedTools];
+    
+    // Deduplicate existing permissions first
+    const deduplicatedExisting = deduplicatePermissions(project.allowedTools);
+    
+    // Merge base permissions with existing ones
+    const newPermissions = mergePermissions(formattedBasePermissions, deduplicatedExisting);
+    
+    // Track the change
+    const change = trackProjectChange(projectPath, oldPermissions, newPermissions);
+    projectChanges.push(change);
+    
+    // Update the project if there were changes
+    if (!change.unchanged && !dryRun) {
+      project.allowedTools = newPermissions;
     }
   }
 
-  if (updatedCount > 0) {
+  // Create and display summary
+  const summary = createChangeSummary(projectChanges);
+  
+  if (showChangeSummary || dryRun) {
+    displayChangeSummary(summary, verboseLogging || dryRun);
+  }
+
+  // Save changes if not a dry run and there were updates
+  if (!dryRun && summary.updatedProjects > 0) {
     await saveClaudeConfig(config, testMode);
-    logger.success(`Updated ${updatedCount} project(s) with base commands`);
-    if (totalDuplicatesRemoved > 0) {
-      logger.info(`Total duplicates removed: ${totalDuplicatesRemoved}`);
-    }
-  } else {
-    logger.success('All projects already have base commands');
   }
+}
+
+// Keep the old function name for backwards compatibility, but have it call the new one
+export async function ensureCommands(testMode: boolean = false): Promise<void> {
+  return applyPermissions(testMode, false);
 }

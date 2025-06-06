@@ -2,6 +2,45 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.0] - 2025-01-06
+
+### 🚀 Major Update - Permissions System Overhaul
+
+This release transforms the command management system into a comprehensive permissions system with built-in safety features and improved developer experience.
+
+### Added
+- **Smart Command Expansion**: Automatically expands simple commands (e.g., `make` → `make:*`)
+- **Dangerous Command Guards**: 
+  - Completely blocks destructive commands like `rm -rf /`
+  - Warns about potentially dangerous commands with confirmation prompts
+- **Detailed Change Tracking**: Shows exactly what permissions were added/removed per project
+- **Auto-Apply Feature**: New permissions are immediately applied to all projects (configurable)
+- **User Preferences System** (`~/.cch/preferences.json`):
+  - Configure auto-apply behavior
+  - Control change summary display
+  - Manage warning suppression
+- **Startup Safety Check**: Automatically checks for dangerous permissions on startup
+
+### Changed
+- **Complete Terminology Update**: "Commands" → "Permissions" throughout
+- **New Command Structure**:
+  - `-lp/--list-permissions` (replaces `-lc`)
+  - `-add/--add-permission` (replaces `-ac`)
+  - `-rm/--remove-permission` (replaces `-dc`)
+  - `-ap/--apply-permissions` (replaces `-ec`)
+  - `-dp/--discover` (replaces `-sc`)
+- **File Rename**: `base-commands.json` → `permissions.json`
+- **Improved Feedback**: Clear, colorful output showing permission changes
+
+### Enhanced
+- **Better Safety**: Multiple layers of protection against dangerous commands
+- **Improved UX**: Smart defaults, helpful prompts, and detailed feedback
+- **Code Organization**: Modular structure with dedicated safety and utility modules
+
+### Removed
+- Legacy command aliases (no backwards compatibility needed for pre-release)
+- Duplicate code from old monolithic structure
+
 ## [1.0.6] - 2025-01-06
 
 ### Added

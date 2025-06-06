@@ -11,59 +11,40 @@ export async function listCommands(testMode: boolean = false): Promise<void> {
   const commands = await loadBaseCommands(testMode);
 
   if (commands.length === 0) {
-    logger.warning('No base commands configured');
+    logger.warning('No permissions configured');
+    logger.info('Use "cch -add <permission>" to add your first permission');
     return;
   }
 
-  console.log(chalk.cyan('Base Commands:'));
+  console.log(chalk.cyan('Your Permissions:'));
   commands.forEach((cmd, index) => {
     console.log(`  ${chalk.gray(`${index + 1}.`)} ${cmd}`);
   });
 }
 
-export async function addCommand(command: string, testMode: boolean = false): Promise<void> {
-  const commands = await loadBaseCommands(testMode);
-
-  let normalizedCommand = command;
-  if (command.startsWith('Bash(') && command.endsWith(')')) {
-    normalizedCommand = command.slice(5, -1);
-  }
-
-  let formattedCommand = normalizedCommand;
-  if (!normalizedCommand.includes(':') && !normalizedCommand.includes(' ')) {
-    formattedCommand = `${normalizedCommand}:*`;
-  }
-
-  if (commands.includes(formattedCommand)) {
-    logger.warning(`Command already exists: ${formattedCommand}`);
-    return;
-  }
-
-  commands.push(formattedCommand);
-  await saveBaseCommands(commands, testMode);
-  logger.success(`Added command: ${formattedCommand}`);
-}
+// Re-export from add.ts for backwards compatibility
+export { addPermission as addCommand } from './add';
 
 export async function removeCommand(index: number, force: boolean = false, testMode: boolean = false): Promise<void> {
   const commands = await loadBaseCommands(testMode);
 
   if (index < 1 || index > commands.length) {
     throw new InvalidCommandError(
-      `Invalid command number: ${index}. Use 'cch -lc' to see available commands.`
+      `Invalid permission number: ${index}. Use 'cch -lp' to see available permissions.`
     );
   }
 
-  const commandToRemove = commands[index - 1];
+  const permissionToRemove = commands[index - 1];
 
   if (!force) {
-    logger.warning(`Remove command: ${commandToRemove}`);
+    logger.warning(`Remove permission: ${permissionToRemove}`);
     logger.info(chalk.gray('Use --force to confirm removal'));
     return;
   }
 
   commands.splice(index - 1, 1);
   await saveBaseCommands(commands, testMode);
-  logger.success(`Removed command: ${commandToRemove}`);
+  logger.success(`Removed permission: ${permissionToRemove}`);
 }
 
 export async function normalizeCommands(silent: boolean = false, testMode: boolean = false): Promise<boolean> {

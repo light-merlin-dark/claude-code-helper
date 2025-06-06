@@ -1,14 +1,16 @@
 # Claude Code Helper
 
-A companion tool for Claude Code that helps developers manage command permissions across their projects.
+A companion tool for Claude Code that helps developers manage bash command permissions across their projects with built-in safety features.
 
 ## What it does
 
 Claude Code requires explicit permission to run terminal commands in your projects. This tool allows developers to:
-- Define a base set of allowed commands that should be available across all projects
-- Apply these command permissions to multiple projects at once
+- Define a base set of permissions that should be available across all projects
+- Smart command expansion (e.g., `docker` → `docker:*`)
+- Built-in safety guards against dangerous commands
+- Apply permissions to multiple projects with detailed change tracking
 - Backup and restore your Claude Code configuration
-- Keep your command permissions organized and consistent
+- Keep your permissions organized and consistent
 
 ## Installation
 
@@ -20,12 +22,14 @@ npm i -g @light-merlin-dark/claude-code-helper
 
 ## Features
 
-- **Command Permissions Management**: Define and apply command permissions across all your Claude Code projects
-- **Smart Suggestions**: Discovers commands you use frequently and suggests adding them to your base set
+- **Permission Management**: Define and apply bash command permissions across all your Claude Code projects
+- **Smart Command Expansion**: Automatically expands simple commands (e.g., `make` → `make:*`)
+- **Safety Guards**: Blocks dangerous commands like `rm -rf /` and warns about risky ones
+- **Detailed Change Tracking**: See exactly what permissions were added or removed per project
+- **Auto-Apply**: New permissions are immediately applied to all projects (configurable)
+- **Smart Discovery**: Find permissions you use frequently across projects
 - **Backup/Restore**: Save snapshots of your Claude configuration before making changes
-- **Bulk Updates**: Apply your base command set to all projects at once
-- **Smart Deduplication**: Automatically removes duplicate commands from project configurations
-- **Test Mode**: Preview changes before applying them
+- **User Preferences**: Configure behavior via `~/.cch/preferences.json`
 
 ## Usage
 
@@ -33,34 +37,35 @@ npm i -g @light-merlin-dark/claude-code-helper
 cch [options]
 ```
 
-### Managing Command Permissions
+### Managing Permissions
 
-List your current base commands:
+List your current permissions:
 ```bash
-cch --list-commands
+cch --list-permissions      # or use short alias: cch -lp
 ```
 
-Discover frequently used commands:
+Add a new permission (with smart expansion and auto-apply):
 ```bash
-cch --suggest-commands      # Analyzes your projects and suggests common commands
+cch --add "docker"         # Automatically expands to "docker:*" and applies
+cch --add "npm run build"  # Multi-word commands are added as-is
 ```
 
-Add a new command to your base set:
+Discover frequently used permissions:
 ```bash
-cch --add-command "make:*"         # Add with wildcard for all make commands
-cch --add-command "npm run build"  # Add specific command
+cch --discover             # Analyzes your projects and suggests common permissions
+cch -dp                    # Short alias
 ```
 
-Remove a command from your base set:
+Remove a permission:
 ```bash
-cch --delete-command 2             # Remove command #2 (with confirmation)
-cch --delete-command 2 --force     # Remove without confirmation
+cch --remove 2             # Remove permission #2 (with confirmation)
+cch -rm 2 --force          # Remove without confirmation
 ```
 
-Apply your base commands to all projects:
+Apply permissions to all projects:
 ```bash
-cch --ensure-commands              # Apply to all projects
-cch --ensure-commands --test       # Preview what would change
+cch --apply-permissions    # Apply to all projects with detailed change log
+cch -ap                    # Short alias
 ```
 
 ### Backup and Restore
@@ -90,10 +95,6 @@ Check version history:
 cch --changelog                    # View recent changes and updates
 ```
 
-Normalize command formatting:
-```bash
-cch --normalize-commands           # Clean up command formatting
-```
 
 ### Cleanup
 
@@ -104,8 +105,9 @@ cch -dd                            # Short alias
 ```
 
 This will remove:
-- Your base commands configuration
+- Your permissions configuration
 - All backup files
+- User preferences
 - The entire `~/.cch` directory
 
 **Note**: Your Claude config (`~/.claude.json`) will be preserved.
@@ -116,14 +118,13 @@ For convenience, all commands have short aliases:
 
 | Long Form | Short Alias | Description |
 |-----------|-------------|-------------|
-| `--list-commands` | `-lc` | List base commands |
-| `--suggest-commands` | `-sc` | Suggest frequently used commands |
-| `--add-command` | `-ac` | Add a command |
-| `--delete-command` | `-dc` | Delete a command |
-| `--ensure-commands` | `-ec` | Apply to all projects |
+| `--list-permissions` | `-lp` | List your permissions |
+| `--discover` | `-dp` | Discover frequently used permissions |
+| `--add-permission` | `-add` | Add a permission (with smart expansion) |
+| `--remove-permission` | `-rm` | Remove a permission by number |
+| `--apply-permissions` | `-ap` | Apply permissions to all projects |
 | `--backup-config` | `-bc` | Create backup |
 | `--restore-config` | `-rc` | Restore backup |
-| `--normalize-commands` | `-nc` | Normalize formatting |
 | `--config` | `-c` | View configuration |
 | `--changelog` | - | View version history |
 | `--delete-data` | `-dd` | Delete all CCH data |
@@ -134,12 +135,13 @@ For convenience, all commands have short aliases:
 
 - **Claude Config**: `~/.claude.json` (managed by Claude)
 - **CCH Directory**: `~/.cch/` (all CCH data)
-  - **Base Commands**: `~/.cch/base-commands.json`
+  - **Permissions**: `~/.cch/permissions.json`
+  - **Preferences**: `~/.cch/preferences.json`
   - **Backups**: `~/.cch/backups/`
 
-## Default Base Commands
+## Default Permissions
 
-If no base commands file exists, the following defaults are created:
+If no permissions file exists, the following safe defaults are created:
 - `make:*`
 - `npm run:*`
 - `npm test:*`
@@ -147,57 +149,89 @@ If no base commands file exists, the following defaults are created:
 - `git diff:*`
 - `git log:*`
 
+## Safety Features
+
+### Blocked Commands
+The following commands are completely blocked for safety:
+- `rm -rf /` and similar destructive commands
+- Fork bombs
+- Disk formatting commands
+- Direct disk write operations
+
+### Warning Commands
+You'll receive warnings and confirmation prompts for:
+- `rm` commands without specific paths
+- `chmod 777` and similar permission changes
+- Commands that could affect system files
+
+### Smart Expansion
+Simple commands are automatically expanded:
+- `docker` → `docker:*`
+- `npm` → `npm:*`
+- `make` → `make:*`
+
 ## Examples
 
-### Setting Up Command Permissions for All Projects
+### Setting Up Permissions for All Projects
 
 ```bash
 # 1. First, backup your current configuration
 cch --backup-config --name before-setup
 
-# 2. Check your current base commands
-cch --list-commands
+# 2. Check your current permissions
+cch -lp
 
-# 3. Add commands you want available in all projects
-cch --add-command "docker:*"
-cch --add-command "yarn:*"
-cch --add-command "pytest:*"
+# 3. Add permissions you want available in all projects
+cch -add docker    # Automatically expands to docker:* and applies
+cch -add yarn      # No need to type the :* anymore!
+cch -add pytest    # Smart expansion handles it for you
 
-# 4. Preview what will change
-cch --ensure-commands --test
+# 4. See the detailed changes that were made
+# (Each add command shows what was changed in each project)
 
-# 5. Apply the commands to all projects
-cch --ensure-commands
-
-# 6. If needed, restore your original config
+# 5. If needed, restore your original config
 cch --restore-config --name before-setup
 ```
 
 ### Quick Permission Updates
 
 ```bash
-# See what commands are in your base set
-cch --list-commands
+# See what permissions you have
+cch -lp
 
-# Add a new tool you're using across projects
-cch --add-command "cargo:*"
+# Add a new tool with auto-apply
+cch -add cargo    # Adds cargo:* and immediately applies to all projects
 
-# Apply immediately to all projects
-cch --ensure-commands
+# The tool shows you exactly what changed in each project
 ```
 
-### Discovering Common Commands
+### Discovering Common Permissions
 
 ```bash
 # Let the tool analyze your projects
-cch --suggest-commands
+cch -dp
 
-# It will show commands used in multiple projects:
+# It will show permissions used in multiple projects:
 # 1. docker:*         (used in 8 projects)
 # 2. yarn:*           (used in 6 projects)
 # 3. pytest:*         (used in 3 projects)
 
-# Select which ones to add to your base set
+# Select which ones to add (they'll be auto-applied)
+```
+
+### Safety Examples
+
+```bash
+# Dangerous commands are blocked
+cch -add "rm -rf /"
+# ⛔ BLOCKED: "rm -rf /"
+# This command could cause irreversible system damage
+
+# Warnings for risky commands
+cch -add rm
+# ⚠️  WARNING: "rm" is a potentially dangerous permission
+# Could permanently delete files
+# Type "yes" to confirm:
 ```
 
 ## Features in Detail
@@ -219,10 +253,13 @@ The `--changelog` command displays:
 
 Claude Code stores command permissions in `~/.claude.json` for each project. This tool:
 
-1. **Maintains a Base Command Set**: Your commonly used commands are stored in `~/.cch/base-commands.json`
-2. **Syncs Permissions**: When you run `--ensure-commands`, it adds your base commands to all projects
-3. **Preserves Project-Specific Commands**: Existing project commands are kept, duplicates are removed
-4. **Formats Correctly**: Commands are automatically wrapped in the required `Bash()` format for Claude Code
+1. **Maintains a Permissions Set**: Your commonly used permissions are stored in `~/.cch/permissions.json`
+2. **Smart Expansion**: Simple commands like `docker` are automatically expanded to `docker:*`
+3. **Safety First**: Dangerous commands are blocked or require confirmation
+4. **Auto-Apply**: New permissions are immediately applied to all projects (configurable)
+5. **Preserves Project-Specific Permissions**: Existing project permissions are kept, duplicates are removed
+6. **Detailed Tracking**: Shows exactly what changed in each project
+7. **Formats Correctly**: Permissions are automatically wrapped in the required `Bash()` format for Claude Code
 
 ## Development
 

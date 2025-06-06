@@ -7,6 +7,8 @@ import { logger } from './utils/logger';
 import * as manage from './commands/permissions/manage';
 import * as apply from './commands/permissions/apply';
 import * as discover from './commands/permissions/discover';
+import { checkPermissionsOnStartup } from './commands/permissions/check';
+import { addPermission } from './commands/permissions/add';
 
 // Config management
 import * as backup from './commands/config/backup';
@@ -39,31 +41,30 @@ function generateHelpText(testMode: boolean = false): string {
   const baseCommandsPath = getBaseCommandsPath(testMode);
   const baseCommandsExist = fs.existsSync(baseCommandsPath);
   
-  let helpText = `Claude Code Helper - Manage command permissions across your Claude Code projects
+  let helpText = `Claude Code Helper - Manage permissions across your Claude Code projects
 
 Usage: cch [options]
 
 `;
 
   if (!baseCommandsExist) {
-    helpText += `New user? Start by discovering your common commands:
-  cch -sc                    # Discover frequently used commands
+    helpText += `New user? Start by discovering your common permissions:
+  cch -dp                    # Discover frequently used permissions
 
 `;
   }
   
   helpText += `Quick Start:
-  cch -lc                    # See your base commands
-  cch -ac "docker:*"         # Add a command to your base set
-  cch -ec                    # Apply base commands to all projects
+  cch -lp                    # See your permissions
+  cch -add "docker"          # Add a permission (auto-expands to docker:*)
+  cch -ap                    # Apply permissions to all projects
 
-Managing Commands:
-  -lc, --list-commands       List your base commands
-  -sc, --suggest-commands    Suggest frequently used commands
-  -ac, --add-command         Add a command to base set
-  -dc, --delete-command      Remove a command by number
-  -ec, --ensure-commands     Apply base commands to all projects
-  -nc, --normalize-commands  Clean up command formatting
+Managing Permissions:
+  -lp, --list-permissions    List your permissions
+  -dp, --discover            Discover frequently used permissions
+  -add, --add-permission     Add a permission (with smart expansion)
+  -rm, --remove-permission   Remove a permission by number
+  -ap, --apply-permissions   Apply permissions to all projects
 
 Configuration:
   -c, --config               View current configuration and file paths
@@ -82,15 +83,16 @@ Options:
   -f, --force                Skip confirmation prompts
 
 Configuration Locations:
-  Base Commands: ~/.cch/base-commands.json
+  Permissions:   ~/.cch/permissions.json
+  Preferences:   ~/.cch/preferences.json
   Claude Config: ~/.claude.json (managed by Claude)
   Backups:       ~/.cch/backups/
 
 Examples:
-  cch -lc                    # Start here - see your commands
-  cch -ac "pytest:*"         # Add pytest to all projects
-  cch -ec --test             # Preview what will change
-  cch -ec                    # Apply changes
+  cch -lp                    # Start here - see your permissions
+  cch -add "pytest"          # Add pytest (auto-expands to pytest:*)
+  cch -ap --test             # Preview what will change
+  cch -ap                    # Apply changes
   cch -bc -n before-update   # Create a named backup
 
 View recent changes:
@@ -103,22 +105,25 @@ export async function handleCLI(args: string[]): Promise<void> {
   const { options } = parseArgs(args);
   
   const {
+    // Permission commands
+    'list-permissions': listPermissions_,
+    lp: lp,
+    'discover-permissions': discoverPermissions_,
+    'discover': discover_,
+    dp: dp,
+    'add-permission': addPermission_,
+    'add': add_,
+    'remove-permission': removePermission_,
+    'remove': remove_,
+    rm: rm,
+    'apply-permissions': applyPermissions_,
+    ap: ap,
+    
+    // Config management commands
     'backup-config': backupConfig_,
     bc: bc,
     'restore-config': restoreConfig_,
     rc: rc,
-    'ensure-commands': ensureCommands_,
-    ec: ec,
-    'list-commands': listCommands_,
-    lc: lc,
-    'suggest-commands': suggestCommands_,
-    sc: sc,
-    'add-command': addCommand_,
-    ac: ac,
-    'delete-command': deleteCommand_,
-    dc: dc,
-    'normalize-commands': normalizeCommands_,
-    nc: nc,
     'config': config_,
     c: c,
     'changelog': changelog_,
@@ -126,6 +131,8 @@ export async function handleCLI(args: string[]): Promise<void> {
     dd: dd,
     'version': version_,
     v: v,
+    
+    // Options
     n: backupName,
     name: name,
     test: testMode,
@@ -142,60 +149,61 @@ export async function handleCLI(args: string[]): Promise<void> {
     
     // Check if we need to show help (no command specified)
     const showingHelp = !backupConfig_ && !bc && !restoreConfig_ && !rc && 
-                       !ensureCommands_ && !ec && !listCommands_ && !lc && 
-                       !suggestCommands_ && !sc && !addCommand_ && !ac && 
-                       !deleteCommand_ && !dc && !normalizeCommands_ && !nc && 
-                       !config_ && !c && !changelog_ && !deleteData_ && !dd;
+                       !config_ && !c && !changelog_ && !deleteData_ && !dd &&
+                       !listPermissions_ && !lp && !discoverPermissions_ && !discover_ && !dp &&
+                       !addPermission_ && !add_ && !removePermission_ && !remove_ && !rm &&
+                       !applyPermissions_ && !ap;
     
     // Only ensure base commands exist if we're not just showing help or deleting data
     const isDeletingData = deleteData_ || dd;
     if (!showingHelp && !isDeletingData) {
       await ensureBaseCommandsExist(testMode);
-      // Don't auto-normalize in test mode to allow testing the normalize command
+      // Check for dangerous permissions on startup
       if (!testMode) {
-        await manage.normalizeCommands(true, testMode);
+        await checkPermissionsOnStartup(testMode);
       }
     }
 
     const isBackup = backupConfig_ || bc;
     const isRestore = restoreConfig_ || rc;
-    const isEnsure = ensureCommands_ || ec;
-    const isList = listCommands_ || lc;
-    const isSuggest = suggestCommands_ || sc;
-    const isAdd = addCommand_ || ac;
-    const isDelete = deleteCommand_ || dc;
-    const isNormalize = normalizeCommands_ || nc;
     const isConfig = config_ || c;
     const isChangelog = changelog_;
     const isDeleteData = deleteData_ || dd;
     const backupNameValue = backupName || name;
     const isForce = force || f;
+    
+    // Permission commands
+    const isListPermissions = listPermissions_ || lp;
+    const isDiscoverPermissions = discoverPermissions_ || discover_ || dp;
+    const isAddPermission = addPermission_ || add_;
+    const isRemovePermission = removePermission_ || remove_ || rm;
+    const isApplyPermissions = applyPermissions_ || ap;
 
     if (isBackup) {
       await backup.backupConfig(backupNameValue, testMode);
     } else if (isRestore) {
       await backup.restoreConfig(backupNameValue, testMode);
-    } else if (isEnsure) {
-      await apply.ensureCommands(testMode);
-    } else if (isList) {
+    } else if (isListPermissions) {
       await manage.listCommands(testMode);
-    } else if (isSuggest) {
+    } else if (isDiscoverPermissions) {
       await discover.suggestCommands(testMode);
-    } else if (isAdd) {
-      const command = typeof isAdd === 'string' ? isAdd : typeof ac === 'string' ? ac : '';
-      if (!command) {
-        throw new Error('Please provide a command to add');
+    } else if (isAddPermission) {
+      const permission = typeof isAddPermission === 'string' ? isAddPermission : typeof add_ === 'string' ? add_ : '';
+      if (!permission) {
+        throw new Error('Please provide a permission to add');
       }
-      await manage.addCommand(command, testMode);
-    } else if (isDelete) {
-      const indexStr = typeof isDelete === 'string' ? isDelete : typeof dc === 'string' ? dc : '';
+      await addPermission(permission, testMode);
+    } else if (isRemovePermission) {
+      const indexStr = typeof isRemovePermission === 'string' ? isRemovePermission : 
+                       typeof remove_ === 'string' ? remove_ : 
+                       typeof rm === 'string' ? rm : '';
       const index = parseInt(indexStr, 10);
       if (isNaN(index)) {
-        throw new Error('Please provide a valid command number');
+        throw new Error('Please provide a valid permission number');
       }
       await manage.removeCommand(index, isForce, testMode);
-    } else if (isNormalize) {
-      await manage.normalizeCommands(false, testMode);
+    } else if (isApplyPermissions) {
+      await apply.applyPermissions(testMode, false);
     } else if (isConfig) {
       await view.showConfig(testMode);
     } else if (isChangelog) {
