@@ -1,6 +1,14 @@
 # Claude Code Helper
 
-A CLI tool for managing Claude Code's configuration, particularly the `allowedTools` permissions across projects. It provides backup/restore functionality, base command management, and automatic normalization of command formats.
+A companion tool for Claude Code that helps developers manage command permissions across their projects.
+
+## What it does
+
+Claude Code requires explicit permission to run terminal commands in your projects. This tool allows developers to:
+- Define a base set of allowed commands that should be available across all projects
+- Apply these command permissions to multiple projects at once
+- Backup and restore your Claude Code configuration
+- Keep your command permissions organized and consistent
 
 ## Installation
 
@@ -12,11 +20,11 @@ npm i -g @light-merlin-dark/claude-code-helper
 
 ## Features
 
-- **Backup/Restore Claude Configuration**: Save and restore your Claude Code settings with named backups
-- **Base Commands Management**: Define common commands that should be available across all projects
-- **Automatic Deduplication**: Removes duplicate commands from project configurations
-- **Command Normalization**: Automatically formats commands for consistency
-- **Test Mode**: Dry-run capability to preview changes before applying them
+- **Command Permissions Management**: Define and apply command permissions across all your Claude Code projects
+- **Backup/Restore**: Save snapshots of your Claude configuration before making changes
+- **Bulk Updates**: Apply your base command set to all projects at once
+- **Smart Deduplication**: Automatically removes duplicate commands from project configurations
+- **Test Mode**: Preview changes before applying them
 
 ## Usage
 
@@ -24,62 +32,67 @@ npm i -g @light-merlin-dark/claude-code-helper
 cch [options]
 ```
 
+### Managing Command Permissions
+
+List your current base commands:
+```bash
+cch --list-commands
+```
+
+Add a new command to your base set:
+```bash
+cch --add-command "make:*"         # Add with wildcard for all make commands
+cch --add-command "npm run build"  # Add specific command
+```
+
+Remove a command from your base set:
+```bash
+cch --delete-command 2             # Remove command #2 (with confirmation)
+cch --delete-command 2 --force     # Remove without confirmation
+```
+
+Apply your base commands to all projects:
+```bash
+cch --ensure-commands              # Apply to all projects
+cch --ensure-commands --test       # Preview what would change
+```
+
 ### Backup and Restore
 
-Backup your current Claude configuration:
+Create a backup before making changes:
 ```bash
-cch -bc                  # Default backup
-cch -bc -n pre-update    # Named backup
+cch --backup-config                # Create default backup
+cch --backup-config --name pre-update    # Create named backup
 ```
 
-Restore from a backup:
+Restore from a backup if needed:
 ```bash
-cch -rc                  # Restore default backup
-cch -rc -n pre-update    # Restore named backup
+cch --restore-config               # Restore from default backup
+cch --restore-config --name pre-update   # Restore specific backup
 ```
 
-### Base Commands Management
+### Utility Commands
 
-List current base commands:
+Normalize command formatting:
 ```bash
-cch -lc
+cch --normalize-commands           # Clean up command formatting
 ```
 
-Add a new base command:
-```bash
-cch -ac "make:*"         # Add with wildcard
-cch -ac "npm run build"  # Add specific command
-```
+### Command Aliases
 
-Remove a base command:
-```bash
-cch -dc 2               # Interactive confirmation
-cch -dc 2 -f            # Force removal without confirmation
-```
+For convenience, all commands have short aliases:
 
-Apply base commands to all projects:
-```bash
-cch -ec                 # Ensures all projects have base commands
-cch -ec --test          # Preview changes without applying
-```
-
-Normalize base commands (remove Bash() wrapper):
-```bash
-cch -nc
-```
-
-### Options
-
-- `-bc, --backup-config`: Backup Claude config
-- `-rc, --restore-config`: Restore Claude config
-- `-n, --name <name>`: Named backup/restore
-- `-ec, --ensure-commands`: Apply base commands to all projects
-- `-lc, --list-commands`: List base commands
-- `-ac, --add-command <cmd>`: Add a base command
-- `-dc, --delete-command <n>`: Remove a base command by number
-- `-nc, --normalize-commands`: Normalize base commands
-- `--test`: Test mode (dry run)
-- `-f, --force`: Force operations without confirmation
+| Long Form | Short Alias | Description |
+|-----------|-------------|-------------|
+| `--list-commands` | `-lc` | List base commands |
+| `--add-command` | `-ac` | Add a command |
+| `--delete-command` | `-dc` | Delete a command |
+| `--ensure-commands` | `-ec` | Apply to all projects |
+| `--backup-config` | `-bc` | Create backup |
+| `--restore-config` | `-rc` | Restore backup |
+| `--normalize-commands` | `-nc` | Normalize formatting |
+| `--name` | `-n` | Specify backup name |
+| `--force` | `-f` | Skip confirmations |
 
 ## File Locations
 
@@ -99,45 +112,51 @@ If no base commands file exists, the following defaults are created:
 
 ## Examples
 
-### Complete Workflow
+### Setting Up Command Permissions for All Projects
 
 ```bash
-# 1. Backup current config
-cch -bc -n before-changes
+# 1. First, backup your current configuration
+cch --backup-config --name before-setup
 
-# 2. Add custom commands
-cch -ac "docker:*"
-cch -ac "yarn:*"
+# 2. Check your current base commands
+cch --list-commands
 
-# 3. List commands to verify
-cch -lc
+# 3. Add commands you want available in all projects
+cch --add-command "docker:*"
+cch --add-command "yarn:*"
+cch --add-command "pytest:*"
 
-# 4. Apply to all projects
-cch -ec
+# 4. Preview what will change
+cch --ensure-commands --test
 
-# 5. If something goes wrong, restore
-cch -rc -n before-changes
+# 5. Apply the commands to all projects
+cch --ensure-commands
+
+# 6. If needed, restore your original config
+cch --restore-config --name before-setup
 ```
 
-### Managing Project Permissions
+### Quick Permission Updates
 
 ```bash
-# Check what would happen first
-cch -ec --test
+# See what commands are in your base set
+cch --list-commands
 
-# Apply base commands and remove duplicates
-cch -ec
+# Add a new tool you're using across projects
+cch --add-command "cargo:*"
 
-# Normalize any improperly formatted commands
-cch -nc
+# Apply immediately to all projects
+cch --ensure-commands
 ```
 
 ## How It Works
 
-1. **Base Commands**: Define a set of commands that should be available in all your Claude Code projects
-2. **Automatic Formatting**: Commands are automatically formatted as `Bash(command)` when applied to projects
-3. **Deduplication**: Removes duplicate entries from project configurations
-4. **Order Preservation**: Base commands appear first, followed by project-specific commands
+Claude Code stores command permissions in `~/.claude.json` for each project. This tool:
+
+1. **Maintains a Base Command Set**: Your commonly used commands are stored in `~/.cch/base-commands.json`
+2. **Syncs Permissions**: When you run `--ensure-commands`, it adds your base commands to all projects
+3. **Preserves Project-Specific Commands**: Existing project commands are kept, duplicates are removed
+4. **Formats Correctly**: Commands are automatically wrapped in the required `Bash()` format for Claude Code
 
 ## Development
 
