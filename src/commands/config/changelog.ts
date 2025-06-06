@@ -8,7 +8,15 @@ import { logger } from '../../utils/logger';
  */
 
 export async function showChangelog(): Promise<void> {
-  const changelogPath = path.join(__dirname, '../../../CHANGELOG.md');
+  // In production, CHANGELOG.md is at the package root
+  // In development, it's at the project root
+  let changelogPath = path.join(__dirname, '../../../CHANGELOG.md');
+  
+  // If not found in development location, try production location
+  if (!fs.existsSync(changelogPath)) {
+    // Go up from dist/commands/config to package root
+    changelogPath = path.join(__dirname, '../../CHANGELOG.md');
+  }
   
   if (!fs.existsSync(changelogPath)) {
     logger.warning('Changelog file not found');

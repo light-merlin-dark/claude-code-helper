@@ -1,4 +1,5 @@
 import fs from 'fs';
+import path from 'path';
 import { parseArgs } from './common';
 import { logger } from './utils/logger';
 
@@ -16,6 +17,23 @@ import * as cleanup from './commands/config/cleanup';
 // Core utilities
 import { ensureBaseCommandsExist } from './core/config';
 import { getBaseCommandsPath } from './core/paths';
+
+function getVersion(): string {
+  try {
+    // In production, package.json is at the package root
+    let packagePath = path.join(__dirname, '../../package.json');
+    
+    // If not found, try development location
+    if (!fs.existsSync(packagePath)) {
+      packagePath = path.join(__dirname, '../package.json');
+    }
+    
+    const packageJson = JSON.parse(fs.readFileSync(packagePath, 'utf8'));
+    return packageJson.version;
+  } catch (error) {
+    return 'unknown';
+  }
+}
 
 function generateHelpText(testMode: boolean = false): string {
   const baseCommandsPath = getBaseCommandsPath(testMode);
@@ -106,6 +124,8 @@ export async function handleCLI(args: string[]): Promise<void> {
     'changelog': changelog_,
     'delete-data': deleteData_,
     dd: dd,
+    'version': version_,
+    v: v,
     n: backupName,
     name: name,
     test: testMode,
@@ -114,6 +134,12 @@ export async function handleCLI(args: string[]): Promise<void> {
   } = options;
 
   try {
+    // Handle version flag first
+    if (version_ || v) {
+      console.log(`Claude Code Helper v${getVersion()}`);
+      return;
+    }
+    
     // Check if we need to show help (no command specified)
     const showingHelp = !backupConfig_ && !bc && !restoreConfig_ && !rc && 
                        !ensureCommands_ && !ec && !listCommands_ && !lc && 

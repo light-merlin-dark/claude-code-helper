@@ -436,5 +436,18 @@ runner.test('Should migrate backups from old to new location', () => {
   }
 });
 
+// Test: Version command
+runner.test('Should display version with -v/--version', () => {
+  const output1 = runCommand('-v');
+  if (!output1.includes('Claude Code Helper v')) {
+    throw new Error('Version not displayed with -v flag');
+  }
+  
+  const output2 = runCommand('--version');
+  if (!output2.includes('Claude Code Helper v')) {
+    throw new Error('Version not displayed with --version flag');
+  }
+});
+
 // Run all tests
 runner.run();

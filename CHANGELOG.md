@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.6] - 2025-01-06
+
+### Added
+- `-v` / `--version` command to display the current version
+
+### Fixed
+- CHANGELOG.md not found error in production
+- Include CHANGELOG.md in npm package distribution
+
 ## [1.0.5] - 2025-01-06
 
 ### Added
