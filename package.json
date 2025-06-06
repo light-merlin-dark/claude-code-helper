@@ -4,8 +4,8 @@
   "description": "CLI tool for managing Claude Code configurations",
   "main": "dist/index.js",
   "bin": {
-    "cch": "./dist/index.js",
-    "claude-code-helper": "./dist/index.js"
+    "cch": "dist/index.js",
+    "claude-code-helper": "dist/index.js"
   },
   "scripts": {
     "build": "tsc",
@@ -27,7 +27,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/light-merlin-dark/claude-code-helper.git"
+    "url": "git+https://github.com/light-merlin-dark/claude-code-helper.git"
   },
   "homepage": "https://github.com/light-merlin-dark/claude-code-helper#readme",
   "bugs": {
