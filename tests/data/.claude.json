@@ -1,0 +1,36 @@
+{
+  "numStartups": 42,
+  "autoUpdaterStatus": "disabled",
+  "userID": "test-user-123",
+  "hasCompletedOnboarding": true,
+  "projects": {
+    "/test/project1": {
+      "allowedTools": [
+        "Bash(make:*)",
+        "Bash(npm run build:*)",
+        "Bash(make:*)",
+        "Bash(git status)"
+      ],
+      "history": [],
+      "dontCrawlDirectory": false,
+      "enableArchitectTool": true
+    },
+    "/test/project2": {
+      "allowedTools": [
+        "Bash(git add:*)",
+        "Bash(git add:*)",
+        "Bash(m:*)",
+        "Bash(docker:*)"
+      ],
+      "history": [],
+      "dontCrawlDirectory": false,
+      "enableArchitectTool": false
+    },
+    "/test/project3": {
+      "allowedTools": [],
+      "history": [],
+      "dontCrawlDirectory": false,
+      "enableArchitectTool": true
+    }
+  }
+}

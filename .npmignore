@@ -1,0 +1,27 @@
+# Source files
+src/
+tests/
+docs/
+
+# Config files
+.gitignore
+.env
+.env.*
+tsconfig.json
+Makefile
+
+# IDE
+.vscode/
+.idea/
+.zed/
+
+# Git
+.git/
+.github/
+
+# Local data
+.cch/
+
+# Development files
+*.ts
+!*.d.ts

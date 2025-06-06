@@ -1,0 +1,55 @@
+{
+  "name": "@light-merlin-dark/claude-code-helper",
+  "version": "1.0.0",
+  "description": "CLI tool for managing Claude Code configurations",
+  "main": "dist/index.js",
+  "bin": {
+    "cch": "./dist/index.js",
+    "claude-code-helper": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "ts-node src/index.ts",
+    "test": "ts-node tests/test.ts",
+    "prepublishOnly": "npm run build",
+    "lint": "tsc --noEmit"
+  },
+  "keywords": [
+    "claude",
+    "claude-code",
+    "cli",
+    "config",
+    "helper",
+    "allowedTools",
+    "permissions"
+  ],
+  "author": "Light Merlin Dark",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/light-merlin-dark/claude-code-helper.git"
+  },
+  "homepage": "https://github.com/light-merlin-dark/claude-code-helper#readme",
+  "bugs": {
+    "url": "https://github.com/light-merlin-dark/claude-code-helper/issues"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "dependencies": {
+    "chalk": "^5.3.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0",
+    "ts-node": "^10.9.2"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "publishConfig": {
+    "access": "public"
+  }
+}
