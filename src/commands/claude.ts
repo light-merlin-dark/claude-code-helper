@@ -174,11 +174,33 @@ async function normalizeCommands(silent: boolean = false, testMode: boolean = fa
 
 async function ensureBaseCommandsExist(testMode: boolean = false): Promise<boolean> {
   const commandsPath = getBaseCommandsPath(testMode);
+  const backupsDir = getBackupsDir(testMode);
+  const firstRunBackupPath = path.join(backupsDir, 'first-run-backup.json');
   
   if (!fs.existsSync(commandsPath)) {
+    // First time running - create an automatic backup
+    try {
+      const configPath = getConfigPath(testMode);
+      if (fs.existsSync(configPath)) {
+        await ensureBackupsDir(testMode);
+        const config = await loadClaudeConfig(testMode);
+        fs.writeFileSync(firstRunBackupPath, JSON.stringify(config, null, 2));
+        if (!testMode) {
+          logger.success(`Created automatic backup of Claude config`);
+          logger.info(`  Backup saved to: ${firstRunBackupPath}`);
+        }
+      }
+    } catch (error) {
+      // Don't fail if backup creation fails
+      if (!testMode) {
+        logger.debug('Could not create first-run backup: ' + error);
+      }
+    }
+    
     await saveBaseCommands(DEFAULT_BASE_COMMANDS, testMode);
     if (!testMode) {
       logger.success('Created base commands file with defaults');
+      logger.info(`  Commands saved to: ${commandsPath}`);
     }
     return true;
   }
@@ -305,33 +327,42 @@ async function removeCommand(index: number, force: boolean = false, testMode: bo
 
 const claude: CommandSpec<any> = {
   description: 'Claude configuration helper commands',
-  help: `Claude Code Helper - Manage Claude Code configurations
+  help: `Claude Code Helper - Manage command permissions across your Claude Code projects
 
 Usage: cch [options]
 
-Backup/Restore:
-  -bc, --backup-config     Backup Claude config
-  -rc, --restore-config    Restore Claude config
-  -n, --name <name>        Named backup/restore
+Quick Start:
+  cch -lc                    # See your base commands
+  cch -ac "docker:*"         # Add a command to your base set
+  cch -ec                    # Apply base commands to all projects
 
-Base Commands:
-  -ec, --ensure-commands   Apply base commands to all projects
-  -lc, --list-commands     List base commands
-  -ac, --add-command       Add a base command
-  -dc, --delete-command    Remove a base command by number
-  -nc, --normalize-commands Normalize base commands (remove Bash() wrapper)
+Managing Commands:
+  -lc, --list-commands       List your base commands
+  -ac, --add-command         Add a command to base set
+  -dc, --delete-command      Remove a command by number
+  -ec, --ensure-commands     Apply base commands to all projects
+  -nc, --normalize-commands  Clean up command formatting
+
+Backup & Restore:
+  -bc, --backup-config       Create a backup of Claude config
+  -rc, --restore-config      Restore from a backup
+  -n, --name <name>          Name your backup (use with -bc/-rc)
 
 Options:
-  --test                   Test mode (dry run)
-  -f, --force              Force remove without confirmation
+  --test                     Preview changes without applying
+  -f, --force                Skip confirmation prompts
+
+Configuration Locations:
+  Base Commands: ~/.cch/base-commands.json
+  Claude Config: ~/.claude.json (managed by Claude)
+  Backups:       ~/.claude-backups/
 
 Examples:
-  cch -bc                    # Backup config
-  cch -rc -n before-test     # Restore from named backup
-  cch -ac "make:*"           # Add make commands
-  cch -dc 2 -f               # Remove command #2
-  cch -nc                    # Clean up Bash() format from commands
-  cch -ec                    # Apply base commands to all projects`,
+  cch -lc                    # Start here - see your commands
+  cch -ac "pytest:*"         # Add pytest to all projects
+  cch -ec --test             # Preview what will change
+  cch -ec                    # Apply changes
+  cch -bc -n before-update   # Create a named backup`,
 
   async execute(
     args: string[],
