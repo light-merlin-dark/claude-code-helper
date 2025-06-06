@@ -36,6 +36,9 @@ yarn-error.log*
 .env.local
 .env.*.local
 
+# Personal Makefile
+Makefile
+
 # Test coverage
 coverage/
 .nyc_output/

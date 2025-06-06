@@ -1,3 +1,7 @@
+# Example Makefile for claude-code-helper development
+# Copy this to 'Makefile' and customize for your workflow
+# The actual Makefile is gitignored to allow personal customization
+
 .PHONY: install build dev clean publish test lint help login check-auth whoami link unlink version patch minor major pre-publish
 
 # Load environment variables from .env if it exists

@@ -173,6 +173,11 @@ npm run build
 
 # Run in development
 npm run dev
+
+# Run tests
+npm test
+
+# For additional development commands, see Makefile.example
 ```
 
 ## License
