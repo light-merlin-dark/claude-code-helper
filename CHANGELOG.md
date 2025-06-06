@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.5] - 2025-01-06
+
+### Added
+- New `--delete-data` / `-dd` command to completely remove all CCH data
+- Automatic migration of backups from old location (`~/.claude-backups/`) to new location (`~/.cch/backups/`)
+
+### Changed
+- Moved backup files to `~/.cch/backups/` for cleaner organization
+- All CCH data now lives under a single directory (`~/.cch/`)
+
+### Enhanced
+- Better file organization - everything in one place
+- Easier cleanup process for complete uninstall
+
 ## [1.0.4] - 2025-01-06
 
 ### Added

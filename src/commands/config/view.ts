@@ -40,7 +40,8 @@ export async function showConfig(testMode: boolean = false): Promise<void> {
     console.log('\n' + chalk.green('Configuration Files:'));
     console.log(`  Base Commands: ${chalk.gray(baseCommandsPath)}`);
     console.log(`  Claude Config: ${chalk.gray(configPath)}`);
-    console.log(`  Backups Dir:   ${chalk.gray(backupsDir)}`);
+    console.log(`  Backups:       ${chalk.gray(backupsDir)}`);
+    console.log(`  CCH Directory: ${chalk.gray(path.dirname(baseCommandsPath))}`);
     
     // Show backup files if any exist
     if (fs.existsSync(backupsDir)) {

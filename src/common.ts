@@ -24,7 +24,7 @@ export function parseArgs(args: string[]): {
       const flagStr = arg.slice(1);
       
       // Check if this is a multi-character flag (like -nc, -bc, etc)
-      if (flagStr.length === 2 && ['bc', 'rc', 'ec', 'lc', 'sc', 'ac', 'dc', 'nc'].includes(flagStr)) {
+      if (flagStr.length === 2 && ['bc', 'rc', 'ec', 'lc', 'sc', 'ac', 'dc', 'nc', 'dd'].includes(flagStr)) {
         const nextArg = args[i + 1];
         if (nextArg && !nextArg.startsWith('-')) {
           options[flagStr] = nextArg;

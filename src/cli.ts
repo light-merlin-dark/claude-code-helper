@@ -11,6 +11,7 @@ import * as discover from './commands/permissions/discover';
 import * as backup from './commands/config/backup';
 import * as view from './commands/config/view';
 import * as changelog from './commands/config/changelog';
+import * as cleanup from './commands/config/cleanup';
 
 // Core utilities
 import { ensureBaseCommandsExist } from './core/config';
@@ -55,6 +56,9 @@ Backup & Restore:
   -rc, --restore-config      Restore from a backup
   -n, --name <name>          Name your backup (use with -bc/-rc)
 
+Cleanup:
+  -dd, --delete-data         Delete all CCH data (with confirmation)
+
 Options:
   --test                     Preview changes without applying
   -f, --force                Skip confirmation prompts
@@ -62,7 +66,7 @@ Options:
 Configuration Locations:
   Base Commands: ~/.cch/base-commands.json
   Claude Config: ~/.claude.json (managed by Claude)
-  Backups:       ~/.claude-backups/
+  Backups:       ~/.cch/backups/
 
 Examples:
   cch -lc                    # Start here - see your commands
@@ -100,6 +104,8 @@ export async function handleCLI(args: string[]): Promise<void> {
     'config': config_,
     c: c,
     'changelog': changelog_,
+    'delete-data': deleteData_,
+    dd: dd,
     n: backupName,
     name: name,
     test: testMode,
@@ -113,10 +119,11 @@ export async function handleCLI(args: string[]): Promise<void> {
                        !ensureCommands_ && !ec && !listCommands_ && !lc && 
                        !suggestCommands_ && !sc && !addCommand_ && !ac && 
                        !deleteCommand_ && !dc && !normalizeCommands_ && !nc && 
-                       !config_ && !c && !changelog_;
+                       !config_ && !c && !changelog_ && !deleteData_ && !dd;
     
-    // Only ensure base commands exist if we're not just showing help
-    if (!showingHelp) {
+    // Only ensure base commands exist if we're not just showing help or deleting data
+    const isDeletingData = deleteData_ || dd;
+    if (!showingHelp && !isDeletingData) {
       await ensureBaseCommandsExist(testMode);
       // Don't auto-normalize in test mode to allow testing the normalize command
       if (!testMode) {
@@ -134,6 +141,7 @@ export async function handleCLI(args: string[]): Promise<void> {
     const isNormalize = normalizeCommands_ || nc;
     const isConfig = config_ || c;
     const isChangelog = changelog_;
+    const isDeleteData = deleteData_ || dd;
     const backupNameValue = backupName || name;
     const isForce = force || f;
 
@@ -166,6 +174,8 @@ export async function handleCLI(args: string[]): Promise<void> {
       await view.showConfig(testMode);
     } else if (isChangelog) {
       await changelog.showChangelog();
+    } else if (isDeleteData) {
+      await cleanup.deleteData(testMode);
     } else {
       // Show help text
       console.log(generateHelpText(testMode));

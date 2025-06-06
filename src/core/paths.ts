@@ -14,6 +14,10 @@ export function getConfigPath(testMode: boolean = false): string {
 }
 
 export function getBackupsDir(testMode: boolean = false): string {
+  return path.join(getBaseDir(testMode), '.cch', 'backups');
+}
+
+export function getOldBackupsDir(testMode: boolean = false): string {
   return path.join(getBaseDir(testMode), '.claude-backups');
 }
 

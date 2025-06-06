@@ -95,6 +95,21 @@ Normalize command formatting:
 cch --normalize-commands           # Clean up command formatting
 ```
 
+### Cleanup
+
+Remove all Claude Code Helper data:
+```bash
+cch --delete-data                  # Delete all CCH data (requires confirmation)
+cch -dd                            # Short alias
+```
+
+This will remove:
+- Your base commands configuration
+- All backup files
+- The entire `~/.cch` directory
+
+**Note**: Your Claude config (`~/.claude.json`) will be preserved.
+
 ### Command Aliases
 
 For convenience, all commands have short aliases:
@@ -111,14 +126,16 @@ For convenience, all commands have short aliases:
 | `--normalize-commands` | `-nc` | Normalize formatting |
 | `--config` | `-c` | View configuration |
 | `--changelog` | - | View version history |
+| `--delete-data` | `-dd` | Delete all CCH data |
 | `--name` | `-n` | Specify backup name |
 | `--force` | `-f` | Skip confirmations |
 
 ## File Locations
 
-- **Claude Config**: `~/.claude.json`
-- **Backups**: `~/.claude-backups/`
-- **Base Commands**: `~/.cch/base-commands.json`
+- **Claude Config**: `~/.claude.json` (managed by Claude)
+- **CCH Directory**: `~/.cch/` (all CCH data)
+  - **Base Commands**: `~/.cch/base-commands.json`
+  - **Backups**: `~/.cch/backups/`
 
 ## Default Base Commands
 

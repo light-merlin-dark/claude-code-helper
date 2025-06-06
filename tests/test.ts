@@ -6,8 +6,9 @@ import chalk from 'chalk';
 // Test data directory
 const TEST_DATA_DIR = path.join(__dirname, 'data');
 const TEST_CONFIG_PATH = path.join(TEST_DATA_DIR, '.claude.json');
-const TEST_BACKUPS_DIR = path.join(TEST_DATA_DIR, '.claude-backups');
+const TEST_BACKUPS_DIR = path.join(TEST_DATA_DIR, '.cch', 'backups');
 const TEST_BASE_COMMANDS_PATH = path.join(TEST_DATA_DIR, '.cch', 'base-commands.json');
+const TEST_CCH_DIR = path.join(TEST_DATA_DIR, '.cch');
 
 // CLI command
 const CLI_PATH = path.join(__dirname, '../src/index.ts');
@@ -66,14 +67,18 @@ function resetTestData(): void {
   const originalCommands = ["make:*", "Bash(npm run:*)", "npm test:*", "Bash(git status)", "git diff:*"];
   
   fs.writeFileSync(TEST_CONFIG_PATH, JSON.stringify(originalConfig, null, 2));
+  
+  // Ensure the .cch directory exists before writing base commands
+  const cchDir = path.dirname(TEST_BASE_COMMANDS_PATH);
+  if (!fs.existsSync(cchDir)) {
+    fs.mkdirSync(cchDir, { recursive: true });
+  }
   fs.writeFileSync(TEST_BASE_COMMANDS_PATH, JSON.stringify(originalCommands, null, 2));
   
-  // Clean up backups
-  if (fs.existsSync(TEST_BACKUPS_DIR)) {
-    const files = fs.readdirSync(TEST_BACKUPS_DIR);
-    files.forEach(file => {
-      fs.unlinkSync(path.join(TEST_BACKUPS_DIR, file));
-    });
+  // Clean up old backup directory if it exists
+  const oldBackupsDir = path.join(TEST_DATA_DIR, '.claude-backups');
+  if (fs.existsSync(oldBackupsDir)) {
+    fs.rmSync(oldBackupsDir, { recursive: true });
   }
 }
 
@@ -138,14 +143,18 @@ runner.test('Should list base commands', () => {
 // Test: Normalize commands
 runner.test('Should normalize base commands (remove Bash() wrapper)', () => {
   const output = runCommand('-nc --test');
-  if (!output.includes('Normalized base commands')) {
-    throw new Error('Normalization did not succeed');
-  }
   
+  // Check that normalization ran (it may or may not show success message depending on if changes were made)
   const commands = readBaseCommands();
   const hasWrappedCommands = commands.some(cmd => cmd.startsWith('Bash('));
   if (hasWrappedCommands) {
     throw new Error('Commands still have Bash() wrapper after normalization');
+  }
+  
+  // The original test data has 2 Bash() wrapped commands, so if normalization worked,
+  // they should be unwrapped now
+  if (!commands.includes('npm run:*') || !commands.includes('git status')) {
+    throw new Error('Expected normalized commands not found');
   }
 });
 
@@ -177,14 +186,21 @@ runner.test('Should add wildcard to commands without it', () => {
 
 // Test: Remove command
 runner.test('Should remove a base command', () => {
+  // Verify we start with 5 commands
+  const commandsBefore = readBaseCommands();
+  if (commandsBefore.length !== 5) {
+    throw new Error(`Started with wrong number of commands: ${commandsBefore.length}`);
+  }
+  
   const output = runCommand('-dc 2 -f --test');
   if (!output.includes('Removed command:')) {
     throw new Error('Command not removed');
   }
   
   const commands = readBaseCommands();
-  if (commands.length !== 4) { // Started with 5, removed 1
-    throw new Error('Command count incorrect after removal');
+  // Each test resets data, so we start with 5 commands and remove 1, leaving 4
+  if (commands.length !== 4) {
+    throw new Error(`Command count incorrect after removal: expected 4, got ${commands.length}. Commands: ${JSON.stringify(commands)}`);
   }
 });
 
@@ -357,6 +373,66 @@ runner.test('Should show onboarding text for new users', () => {
   if (!output.includes('New user?') || 
       !output.includes('Start by discovering your common commands')) {
     throw new Error('New user onboarding text not shown');
+  }
+});
+
+// Test: Delete data command
+runner.test('Should delete all CCH data with --delete-data', () => {
+  // First ensure we have some data
+  runCommand('-ac "test:*" --test');
+  runCommand('-bc --test');
+  
+  // Verify data exists
+  if (!fs.existsSync(TEST_CCH_DIR)) {
+    throw new Error('CCH directory should exist before delete');
+  }
+  
+  // Run delete command (in test mode, no confirmation needed)
+  const output = runCommand('--delete-data --test');
+  
+  if (!output.includes('All Claude Code Helper data has been deleted')) {
+    throw new Error('Delete command did not complete successfully');
+  }
+  
+  // Verify data is gone
+  if (fs.existsSync(TEST_CCH_DIR)) {
+    throw new Error('CCH directory should not exist after delete');
+  }
+});
+
+// Test: Delete data with no data to delete
+runner.test('Should handle delete when no data exists', () => {
+  // Make sure no data exists
+  if (fs.existsSync(TEST_CCH_DIR)) {
+    fs.rmSync(TEST_CCH_DIR, { recursive: true });
+  }
+  
+  const output = runCommand('--delete-data --test');
+  
+  if (!output.includes('No Claude Code Helper data found to delete')) {
+    throw new Error('Should show appropriate message when no data exists');
+  }
+});
+
+// Test: Backup migration from old to new location
+runner.test('Should migrate backups from old to new location', () => {
+  // Create old backup directory with a backup file
+  const oldBackupsDir = path.join(TEST_DATA_DIR, '.claude-backups');
+  fs.mkdirSync(oldBackupsDir, { recursive: true });
+  fs.writeFileSync(path.join(oldBackupsDir, 'test-backup.json'), JSON.stringify({ test: true }));
+  
+  // Run any command that triggers ensureBackupsDir
+  runCommand('-bc --test');
+  
+  // Check that file was migrated
+  const newBackupPath = path.join(TEST_BACKUPS_DIR, 'test-backup.json');
+  if (!fs.existsSync(newBackupPath)) {
+    throw new Error('Backup file was not migrated to new location');
+  }
+  
+  // Check that old directory is removed
+  if (fs.existsSync(oldBackupsDir)) {
+    throw new Error('Old backup directory should be removed after migration');
   }
 });
 

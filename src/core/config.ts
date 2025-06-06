@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { getConfigPath, getBackupsDir, getBaseCommandsPath } from './paths';
+import { getConfigPath, getBackupsDir, getBaseCommandsPath, getOldBackupsDir } from './paths';
 import { DEFAULT_BASE_COMMANDS } from './defaults';
 import { ConfigNotFoundError } from '../shared/errors';
 import { logger } from '../utils/logger';
@@ -70,6 +70,62 @@ export async function ensureBackupsDir(testMode: boolean = false): Promise<void>
   const backupsDir = getBackupsDir(testMode);
   if (!fs.existsSync(backupsDir)) {
     fs.mkdirSync(backupsDir, { recursive: true });
+  }
+  
+  // Migrate old backups if they exist
+  await migrateOldBackups(testMode);
+}
+
+export async function migrateOldBackups(testMode: boolean = false): Promise<void> {
+  const oldBackupsDir = getOldBackupsDir(testMode);
+  const newBackupsDir = getBackupsDir(testMode);
+  
+  // Check if old backups directory exists
+  if (!fs.existsSync(oldBackupsDir)) {
+    return;
+  }
+  
+  try {
+    // Get all files from old directory
+    const files = fs.readdirSync(oldBackupsDir);
+    if (files.length === 0) {
+      // Remove empty old directory
+      fs.rmdirSync(oldBackupsDir);
+      return;
+    }
+    
+    // Ensure new directory exists
+    if (!fs.existsSync(newBackupsDir)) {
+      fs.mkdirSync(newBackupsDir, { recursive: true });
+    }
+    
+    // Move each file
+    let movedCount = 0;
+    for (const file of files) {
+      const oldPath = path.join(oldBackupsDir, file);
+      const newPath = path.join(newBackupsDir, file);
+      
+      // Only move if it's a file and doesn't already exist in new location
+      if (fs.statSync(oldPath).isFile() && !fs.existsSync(newPath)) {
+        fs.renameSync(oldPath, newPath);
+        movedCount++;
+      }
+    }
+    
+    // Remove old directory if empty
+    const remainingFiles = fs.readdirSync(oldBackupsDir);
+    if (remainingFiles.length === 0) {
+      fs.rmdirSync(oldBackupsDir);
+    }
+    
+    if (movedCount > 0 && !testMode) {
+      logger.info(`Migrated ${movedCount} backup file(s) to new location`);
+    }
+  } catch (error) {
+    // Don't fail if migration fails, just log in debug mode
+    if (!testMode) {
+      logger.debug('Could not migrate old backups: ' + error);
+    }
   }
 }
 
