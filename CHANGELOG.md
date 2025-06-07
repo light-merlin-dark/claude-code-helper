@@ -2,6 +2,24 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.0] - 2025-01-06
+
+### Added
+- **Doctor Command** (`--doctor`): Diagnose and fix configuration issues
+  - Detects inconsistent tool wrapping (some with `Bash()`, some without)
+  - Finds and removes duplicate tool entries
+  - Identifies dangerous commands with all-or-nothing removal
+  - Runs all checks concurrently for optimal performance
+  - Creates automatic backups before making changes
+
+### Fixed
+- **Short Flags**: Fixed issue where short flags like `-lp`, `-dp`, `-ap`, and `-add` weren't working in production
+- **Dangerous Command Detection**: Fixed case sensitivity issue preventing proper detection of commands like `chmod -R 777`
+
+### Improved
+- Added comprehensive test coverage for doctor command functionality
+- Enhanced parseArgs to properly handle multi-character short flags
+
 ## [1.1.0] - 2025-01-06
 
 ### 🚀 Major Update - Permissions System Overhaul

@@ -16,6 +16,9 @@ import * as view from './commands/config/view';
 import * as changelog from './commands/config/changelog';
 import * as cleanup from './commands/config/cleanup';
 
+// Doctor command
+import { runDoctor } from './commands/doctor';
+
 // Core utilities
 import { ensureBaseCommandsExist } from './core/config';
 import { getBaseCommandsPath } from './core/paths';
@@ -69,6 +72,7 @@ Managing Permissions:
 Configuration:
   -c, --config               View current configuration and file paths
   --changelog                View recent changes
+  --doctor                   Diagnose and fix configuration issues
 
 Backup & Restore:
   -bc, --backup-config       Create a backup of Claude config
@@ -113,6 +117,7 @@ export async function handleCLI(args: string[]): Promise<void> {
     dp: dp,
     'add-permission': addPermission_,
     'add': add_,
+    add: add,
     'remove-permission': removePermission_,
     'remove': remove_,
     rm: rm,
@@ -127,6 +132,7 @@ export async function handleCLI(args: string[]): Promise<void> {
     'config': config_,
     c: c,
     'changelog': changelog_,
+    'doctor': doctor_,
     'delete-data': deleteData_,
     dd: dd,
     'version': version_,
@@ -149,9 +155,9 @@ export async function handleCLI(args: string[]): Promise<void> {
     
     // Check if we need to show help (no command specified)
     const showingHelp = !backupConfig_ && !bc && !restoreConfig_ && !rc && 
-                       !config_ && !c && !changelog_ && !deleteData_ && !dd &&
+                       !config_ && !c && !changelog_ && !doctor_ && !deleteData_ && !dd &&
                        !listPermissions_ && !lp && !discoverPermissions_ && !discover_ && !dp &&
-                       !addPermission_ && !add_ && !removePermission_ && !remove_ && !rm &&
+                       !addPermission_ && !add_ && !add && !removePermission_ && !remove_ && !rm &&
                        !applyPermissions_ && !ap;
     
     // Only ensure base commands exist if we're not just showing help or deleting data
@@ -168,6 +174,7 @@ export async function handleCLI(args: string[]): Promise<void> {
     const isRestore = restoreConfig_ || rc;
     const isConfig = config_ || c;
     const isChangelog = changelog_;
+    const isDoctor = doctor_;
     const isDeleteData = deleteData_ || dd;
     const backupNameValue = backupName || name;
     const isForce = force || f;
@@ -175,7 +182,7 @@ export async function handleCLI(args: string[]): Promise<void> {
     // Permission commands
     const isListPermissions = listPermissions_ || lp;
     const isDiscoverPermissions = discoverPermissions_ || discover_ || dp;
-    const isAddPermission = addPermission_ || add_;
+    const isAddPermission = addPermission_ || add_ || add;
     const isRemovePermission = removePermission_ || remove_ || rm;
     const isApplyPermissions = applyPermissions_ || ap;
 
@@ -188,7 +195,9 @@ export async function handleCLI(args: string[]): Promise<void> {
     } else if (isDiscoverPermissions) {
       await discover.suggestCommands(testMode);
     } else if (isAddPermission) {
-      const permission = typeof isAddPermission === 'string' ? isAddPermission : typeof add_ === 'string' ? add_ : '';
+      const permission = typeof isAddPermission === 'string' ? isAddPermission : 
+                         typeof add_ === 'string' ? add_ : 
+                         typeof add === 'string' ? add : '';
       if (!permission) {
         throw new Error('Please provide a permission to add');
       }
@@ -208,6 +217,8 @@ export async function handleCLI(args: string[]): Promise<void> {
       await view.showConfig(testMode);
     } else if (isChangelog) {
       await changelog.showChangelog();
+    } else if (isDoctor) {
+      await runDoctor(undefined, testMode);
     } else if (isDeleteData) {
       await cleanup.deleteData(testMode);
     } else {

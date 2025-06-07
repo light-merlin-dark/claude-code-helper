@@ -23,8 +23,9 @@ export function parseArgs(args: string[]): {
     } else if (arg.startsWith('-')) {
       const flagStr = arg.slice(1);
       
-      // Check if this is a multi-character flag (like -nc, -bc, etc)
-      if (flagStr.length === 2 && ['bc', 'rc', 'ec', 'lc', 'sc', 'ac', 'dc', 'nc', 'dd'].includes(flagStr)) {
+      // Check if this is a multi-character flag (like -bc, -rc, -add, etc)
+      const multiCharFlags = ['bc', 'rc', 'dd', 'lp', 'dp', 'ap', 'rm', 'add'];
+      if (multiCharFlags.includes(flagStr)) {
         const nextArg = args[i + 1];
         if (nextArg && !nextArg.startsWith('-')) {
           options[flagStr] = nextArg;

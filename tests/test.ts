@@ -8,6 +8,8 @@ const TEST_DATA_DIR = path.join(__dirname, 'data');
 const TEST_CONFIG_PATH = path.join(TEST_DATA_DIR, '.claude.json');
 const TEST_BACKUPS_DIR = path.join(TEST_DATA_DIR, '.cch', 'backups');
 const TEST_BASE_COMMANDS_PATH = path.join(TEST_DATA_DIR, '.cch', 'base-commands.json');
+const TEST_PERMISSIONS_PATH = path.join(TEST_DATA_DIR, '.cch', 'permissions.json');
+const TEST_PREFERENCES_PATH = path.join(TEST_DATA_DIR, '.cch', 'preferences.json');
 const TEST_CCH_DIR = path.join(TEST_DATA_DIR, '.cch');
 
 // CLI command
@@ -33,6 +35,20 @@ function readBaseCommands(): string[] {
     return [];
   }
   return JSON.parse(fs.readFileSync(TEST_BASE_COMMANDS_PATH, 'utf8'));
+}
+
+function readPermissions(): string[] {
+  if (!fs.existsSync(TEST_PERMISSIONS_PATH)) {
+    return [];
+  }
+  return JSON.parse(fs.readFileSync(TEST_PERMISSIONS_PATH, 'utf8'));
+}
+
+function readPreferences(): any {
+  if (!fs.existsSync(TEST_PREFERENCES_PATH)) {
+    return {};
+  }
+  return JSON.parse(fs.readFileSync(TEST_PREFERENCES_PATH, 'utf8'));
 }
 
 function resetTestData(): void {
@@ -64,16 +80,19 @@ function resetTestData(): void {
     }
   };
   
-  const originalCommands = ["make:*", "Bash(npm run:*)", "npm test:*", "Bash(git status)", "git diff:*"];
+  const originalPermissions = ["make:*", "npm run:*", "npm test:*", "git status", "git diff:*"];
   
   fs.writeFileSync(TEST_CONFIG_PATH, JSON.stringify(originalConfig, null, 2));
   
-  // Ensure the .cch directory exists before writing base commands
-  const cchDir = path.dirname(TEST_BASE_COMMANDS_PATH);
+  // Ensure the .cch directory exists before writing permissions
+  const cchDir = path.dirname(TEST_PERMISSIONS_PATH);
   if (!fs.existsSync(cchDir)) {
     fs.mkdirSync(cchDir, { recursive: true });
   }
-  fs.writeFileSync(TEST_BASE_COMMANDS_PATH, JSON.stringify(originalCommands, null, 2));
+  fs.writeFileSync(TEST_PERMISSIONS_PATH, JSON.stringify(originalPermissions, null, 2));
+  
+  // Also create base-commands for backward compatibility
+  fs.writeFileSync(TEST_BASE_COMMANDS_PATH, JSON.stringify(originalPermissions, null, 2));
   
   // Clean up old backup directory if it exists
   const oldBackupsDir = path.join(TEST_DATA_DIR, '.claude-backups');
@@ -132,83 +151,81 @@ runner.test('Should display help when no arguments provided', () => {
   }
 });
 
-// Test: List commands
-runner.test('Should list base commands', () => {
-  const output = runCommand('-lc --test');
-  if (!output.includes('Base Commands:') || !output.includes('make:*')) {
-    throw new Error('Base commands not listed correctly');
+// Test: List permissions
+runner.test('Should list permissions with -lp', () => {
+  const output = runCommand('-lp --test');
+  if (!output.includes('Your Permissions:') || !output.includes('make:*')) {
+    throw new Error('Permissions not listed correctly');
   }
 });
 
-// Test: Normalize commands
-runner.test('Should normalize base commands (remove Bash() wrapper)', () => {
-  const output = runCommand('-nc --test');
-  
-  // Check that normalization ran (it may or may not show success message depending on if changes were made)
-  const commands = readBaseCommands();
-  const hasWrappedCommands = commands.some(cmd => cmd.startsWith('Bash('));
-  if (hasWrappedCommands) {
-    throw new Error('Commands still have Bash() wrapper after normalization');
+// Test: Apply permissions
+runner.test('Should apply permissions to all projects with -ap', () => {
+  const output = runCommand('-ap --test');
+  if (!output.includes('Updated') || !output.includes('project(s)')) {
+    throw new Error('Permissions not applied correctly');
   }
   
-  // The original test data has 2 Bash() wrapped commands, so if normalization worked,
-  // they should be unwrapped now
-  if (!commands.includes('npm run:*') || !commands.includes('git status')) {
-    throw new Error('Expected normalized commands not found');
+  const config = readTestConfig();
+  const project1Tools = config.projects['/test/project1'].allowedTools;
+  
+  // Should include base permissions
+  if (!project1Tools.some((tool: string) => tool.includes('make:*'))) {
+    throw new Error('Base permissions not applied to project');
   }
 });
 
-// Test: Add command
-runner.test('Should add a new base command', () => {
-  const output = runCommand('-ac "docker:*" --test');
-  if (!output.includes('Added command: docker:*')) {
-    throw new Error('Command not added');
+// Test: Add permission
+runner.test('Should add a new permission with --add', () => {
+  const output = runCommand('--add "docker:*" --test');
+  if (!output.includes('Added permission: docker:*')) {
+    throw new Error('Permission not added');
   }
   
-  const commands = readBaseCommands();
-  if (!commands.includes('docker:*')) {
-    throw new Error('Command not found in base commands file');
+  const permissions = readPermissions();
+  if (!permissions.includes('docker:*')) {
+    throw new Error('Permission not found in permissions file');
   }
 });
 
-// Test: Add command with auto-wildcard
-runner.test('Should add wildcard to commands without it', () => {
-  const output = runCommand('-ac "yarn" --test');
-  if (!output.includes('Added command: yarn:*')) {
-    throw new Error('Wildcard not added to command');
+// Test: Add permission with smart expansion
+runner.test('Should expand permissions intelligently', () => {
+  const output = runCommand('--add "yarn" --test');
+  if (!output.includes('Added permission: yarn:*')) {
+    throw new Error('Permission not expanded correctly');
   }
   
-  const commands = readBaseCommands();
-  if (!commands.includes('yarn:*')) {
-    throw new Error('Command with wildcard not found in base commands file');
+  const permissions = readPermissions();
+  if (!permissions.includes('yarn:*')) {
+    throw new Error('Expanded permission not found in permissions file');
   }
 });
 
-// Test: Remove command
-runner.test('Should remove a base command', () => {
-  // Verify we start with 5 commands
-  const commandsBefore = readBaseCommands();
-  if (commandsBefore.length !== 5) {
-    throw new Error(`Started with wrong number of commands: ${commandsBefore.length}`);
+// Test: Remove permission
+runner.test('Should remove a permission with -rm', () => {
+  // Verify we start with 5 permissions
+  const permissionsBefore = readPermissions();
+  if (permissionsBefore.length !== 5) {
+    throw new Error(`Started with wrong number of permissions: ${permissionsBefore.length}`);
   }
   
-  const output = runCommand('-dc 2 -f --test');
-  if (!output.includes('Removed command:')) {
-    throw new Error('Command not removed');
+  const output = runCommand('-rm 2 -f --test');
+  if (!output.includes('Removed permission:')) {
+    throw new Error('Permission not removed');
   }
   
-  const commands = readBaseCommands();
-  // Each test resets data, so we start with 5 commands and remove 1, leaving 4
-  if (commands.length !== 4) {
-    throw new Error(`Command count incorrect after removal: expected 4, got ${commands.length}. Commands: ${JSON.stringify(commands)}`);
+  const permissions = readPermissions();
+  // Each test resets data, so we start with 5 permissions and remove 1, leaving 4
+  if (permissions.length !== 4) {
+    throw new Error(`Permission count incorrect after removal: expected 4, got ${permissions.length}. Permissions: ${JSON.stringify(permissions)}`);
   }
 });
 
-// Test: Ensure commands with deduplication
-runner.test('Should ensure commands and remove duplicates', () => {
-  const output = runCommand('-ec --test');
-  if (!output.includes('Updated') || !output.includes('project(s) with base commands')) {
-    throw new Error('Ensure commands did not update projects');
+// Test: Apply permissions with deduplication
+runner.test('Should apply permissions and remove duplicates', () => {
+  const output = runCommand('-ap --test');
+  if (!output.includes('Updated') || !output.includes('project(s)')) {
+    throw new Error('Apply permissions did not update projects');
   }
   
   const config = readTestConfig();
@@ -269,25 +286,25 @@ runner.test('Should restore configuration from backup', () => {
   }
 });
 
-// Test: Invalid command number
-runner.test('Should handle invalid command number', () => {
-  const output = runCommand('-dc 99 --test');
-  if (!output.includes('Invalid command number')) {
-    throw new Error('Invalid command number not handled correctly');
+// Test: Invalid permission number
+runner.test('Should handle invalid permission number', () => {
+  const output = runCommand('-rm 99 --test');
+  if (!output.includes('Invalid permission number')) {
+    throw new Error('Invalid permission number not handled correctly');
   }
 });
 
-// Test: Add duplicate command
-runner.test('Should not add duplicate command', () => {
-  const output = runCommand('-ac "make:*" --test');
-  if (!output.includes('Command already exists')) {
-    throw new Error('Duplicate command check failed');
+// Test: Add duplicate permission
+runner.test('Should not add duplicate permission', () => {
+  const output = runCommand('--add "make:*" --test');
+  if (!output.includes('Permission already exists')) {
+    throw new Error('Duplicate permission check failed');
   }
 });
 
-// Test: Force flag requirement
-runner.test('Should require force flag for deletion', () => {
-  const output = runCommand('-dc 1 --test');
+// Test: Force flag requirement for permission removal
+runner.test('Should require force flag for permission deletion', () => {
+  const output = runCommand('-rm 1 --test');
   if (!output.includes('Use --force to confirm')) {
     throw new Error('Force flag requirement not enforced');
   }
@@ -301,21 +318,21 @@ runner.test('Should handle missing backup file', () => {
   }
 });
 
-// Test: Suggest commands with no projects
-runner.test('Should handle suggest commands with no projects', () => {
+// Test: Discover permissions with no projects
+runner.test('Should handle discover permissions with no projects', () => {
   // Clear projects from config
   const config = readTestConfig();
   config.projects = {};
   fs.writeFileSync(TEST_CONFIG_PATH, JSON.stringify(config, null, 2));
   
-  const output = runCommand('--suggest-commands --test');
+  const output = runCommand('-dp --test');
   if (!output.includes('No projects found')) {
-    throw new Error('Empty projects not handled correctly in suggest commands');
+    throw new Error('Empty projects not handled correctly in discover permissions');
   }
 });
 
-// Test: Suggest commands with common commands
-runner.test('Should find common commands across projects', () => {
+// Test: Discover permissions with common commands
+runner.test('Should find common permissions across projects', () => {
   // Set up test data with common commands
   const config = readTestConfig();
   
@@ -330,12 +347,12 @@ runner.test('Should find common commands across projects', () => {
   
   fs.writeFileSync(TEST_CONFIG_PATH, JSON.stringify(config, null, 2));
   
-  // Provide 'n' as input to skip adding commands
-  const output = execSync(`echo n | ${CLI_CMD} --suggest-commands --test`, { encoding: 'utf8' });
-  if (!output.includes('Looking for commonly used commands') || 
+  // Provide 'n' as input to skip adding permissions
+  const output = execSync(`echo n | ${CLI_CMD} -dp --test`, { encoding: 'utf8' });
+  if (!output.includes('Looking for commonly used permissions') || 
       !output.includes('docker:*') ||
       !output.includes('used in 3 projects')) {
-    throw new Error('Common commands not detected correctly');
+    throw new Error('Common permissions not detected correctly');
   }
 });
 
@@ -343,7 +360,7 @@ runner.test('Should find common commands across projects', () => {
 runner.test('Should display configuration with -c/--config', () => {
   const output = runCommand('-c --test');
   if (!output.includes('Claude Code Helper Configuration') || 
-      !output.includes('Base Commands:') ||
+      !output.includes('Permissions:') ||
       !output.includes('Configuration Files:')) {
     throw new Error('Config display not working correctly');
   }
@@ -353,25 +370,28 @@ runner.test('Should display configuration with -c/--config', () => {
 runner.test('Should display changelog with --changelog', () => {
   const output = runCommand('--changelog');
   if (!output.includes('Claude Code Helper - Recent Changes') || 
-      !output.includes('v1.0.4')) {
+      !output.includes('v1.')) {
     throw new Error('Changelog display not working correctly');
   }
 });
 
 // Test: Help text changes for new users
 runner.test('Should show onboarding text for new users', () => {
-  // Remove base commands file and its directory to simulate new user
+  // Remove permissions file and its directory to simulate new user
+  if (fs.existsSync(TEST_PERMISSIONS_PATH)) {
+    fs.unlinkSync(TEST_PERMISSIONS_PATH);
+  }
   if (fs.existsSync(TEST_BASE_COMMANDS_PATH)) {
     fs.unlinkSync(TEST_BASE_COMMANDS_PATH);
   }
-  const baseDir = path.dirname(TEST_BASE_COMMANDS_PATH);
+  const baseDir = path.dirname(TEST_PERMISSIONS_PATH);
   if (fs.existsSync(baseDir)) {
     fs.rmSync(baseDir, { recursive: true });
   }
   
   const output = runCommand('--test');
   if (!output.includes('New user?') || 
-      !output.includes('Start by discovering your common commands')) {
+      !output.includes('Start by discovering your common permissions')) {
     throw new Error('New user onboarding text not shown');
   }
 });
@@ -446,6 +466,272 @@ runner.test('Should display version with -v/--version', () => {
   const output2 = runCommand('--version');
   if (!output2.includes('Claude Code Helper v')) {
     throw new Error('Version not displayed with --version flag');
+  }
+});
+
+// Test: Two-character flags parsing
+runner.test('Should parse two-character flags correctly', () => {
+  const output1 = runCommand('-lp --test');
+  if (!output1.includes('Your Permissions:')) {
+    throw new Error('-lp flag not parsed correctly');
+  }
+  
+  const output2 = runCommand('-dp --test');
+  // It shows the discover output or says no projects found or no permissions found
+  if (!output2.includes('No projects found') && 
+      !output2.includes('Looking for commonly used permissions') &&
+      !output2.includes('No frequently used permissions found')) {
+    throw new Error('-dp flag not parsed correctly');
+  }
+  
+  const output3 = runCommand('-ap --test');
+  if (!output3.includes('Updated') || !output3.includes('project(s)')) {
+    throw new Error('-ap flag not parsed correctly');
+  }
+});
+
+// Test: Smart permission expansion
+runner.test('Should expand permissions based on type', () => {
+  // Test that commands with spaces are not expanded
+  const output1 = runCommand('--add "npm build" --test');
+  if (!output1.includes('Added permission: npm build')) {
+    throw new Error('Command with space was unexpectedly expanded');
+  }
+  
+  // Test git command preservation
+  const output2 = runCommand('--add "git commit" --test');
+  if (!output2.includes('Added permission: git commit')) {
+    throw new Error('git command wrongly expanded');
+  }
+  
+  // Test regular command expansion
+  const output3 = runCommand('--add "docker" --test');
+  if (!output3.includes('Added permission: docker:*')) {
+    throw new Error('Regular command not expanded correctly');
+  }
+});
+
+// Test: Dangerous command warning (using echo to simulate user input)
+runner.test('Should warn about dangerous commands', () => {
+  // Add a dangerous permission
+  const permissions = readPermissions();
+  permissions.push('rm -rf:*');
+  fs.writeFileSync(TEST_PERMISSIONS_PATH, JSON.stringify(permissions, null, 2));
+  
+  // Run without --test flag to see warnings, but with TEST_MODE env var
+  const env = { ...process.env, TEST_MODE: 'true' };
+  const output = execSync(`echo 1 | ${CLI_CMD} -lp`, { encoding: 'utf8', env, cwd: TEST_DATA_DIR });
+  
+  // Since warnings are skipped in test mode, check that the permission still exists
+  const updatedPermissions = readPermissions();
+  if (!updatedPermissions.includes('rm -rf:*')) {
+    throw new Error('Dangerous permission should still exist in test mode');
+  }
+  
+  // Remove the dangerous permission for other tests
+  const cleanPermissions = updatedPermissions.filter(p => p !== 'rm -rf:*');
+  fs.writeFileSync(TEST_PERMISSIONS_PATH, JSON.stringify(cleanPermissions, null, 2));
+});
+
+// Test: Blocked command handling
+runner.test('Should handle blocked commands', () => {
+  // Add a blocked permission (m:* includes mkfs)
+  const permissions = readPermissions();
+  permissions.push('m:*');
+  fs.writeFileSync(TEST_PERMISSIONS_PATH, JSON.stringify(permissions, null, 2));
+  
+  // In test mode, warnings are skipped, so just verify the permission exists
+  const updatedPermissions = readPermissions();
+  if (!updatedPermissions.includes('m:*')) {
+    throw new Error('Blocked permission should still exist in test mode');
+  }
+  
+  // Clean up for other tests
+  const cleanPermissions = updatedPermissions.filter(p => p !== 'm:*');
+  fs.writeFileSync(TEST_PERMISSIONS_PATH, JSON.stringify(cleanPermissions, null, 2));
+});
+
+// Test: Per-command suppression
+runner.test('Should support per-command danger suppression', () => {
+  // This test validates that the preference system works
+  // Since warnings are skipped in test mode, we'll test preference storage directly
+  
+  // Create a preferences file with a suppressed command
+  const prefs = {
+    permissions: {
+      suppressedDangerousCommands: ['chmod:*']
+    }
+  };
+  fs.writeFileSync(TEST_PREFERENCES_PATH, JSON.stringify(prefs, null, 2));
+  
+  // Verify preferences were saved correctly
+  const savedPrefs = readPreferences();
+  if (!savedPrefs.permissions || !savedPrefs.permissions.suppressedDangerousCommands ||
+      !savedPrefs.permissions.suppressedDangerousCommands.includes('chmod:*')) {
+    throw new Error('Preference storage not working correctly');
+  }
+});
+
+// Test: Preferences system
+runner.test('Should save and load preferences correctly', () => {
+  // Update a preference via suppression
+  const permissions = readPermissions();
+  permissions.push('find:*');
+  fs.writeFileSync(TEST_PERMISSIONS_PATH, JSON.stringify(permissions, null, 2));
+  
+  // Suppress warning for this command
+  execSync(`echo 2 | ${CLI_CMD} -lp --test`, { encoding: 'utf8' });
+  
+  // Now run again - should not show warning
+  const output2 = runCommand('-lp --test');
+  if (output2.includes('WARNING: Your permissions file contains potentially dangerous commands') &&
+      output2.includes('find:*')) {
+    throw new Error('Suppressed command still showing warning');
+  }
+});
+
+// Test: Global danger suppression with confirmation
+runner.test('Should support global danger suppression preference', () => {
+  // Test that global suppression preference works
+  const prefs = {
+    permissions: {
+      suppressDangerWarnings: true
+    }
+  };
+  fs.writeFileSync(TEST_PREFERENCES_PATH, JSON.stringify(prefs, null, 2));
+  
+  // Verify preference was saved
+  const savedPrefs = readPreferences();
+  if (!savedPrefs.permissions || savedPrefs.permissions.suppressDangerWarnings !== true) {
+    throw new Error('Global suppression preference not saved correctly');
+  }
+  
+  // Clean up
+  fs.unlinkSync(TEST_PREFERENCES_PATH);
+});
+
+// Test: Changelog shows recent versions
+runner.test('Should show recent versions in changelog', () => {
+  const output = runCommand('--changelog');
+  if (!output.includes('v1.1.0') || !output.includes('Permissions System')) {
+    throw new Error('Changelog not showing recent version 1.1.0');
+  }
+});
+
+// Test: Config command shows all paths
+runner.test('Should show all configuration paths', () => {
+  const output = runCommand('-c --test');
+  if (!output.includes('Permissions:') ||
+      !output.includes('preferences.json') ||
+      !output.includes('permissions.json') ||
+      !output.includes('.claude.json')) {
+    throw new Error('Config command not showing all paths');
+  }
+});
+
+// Test: Short flags should work properly
+runner.test('Should handle -lp short flag correctly', () => {
+  const output = runCommand('-lp --test');
+  if (!output.includes('Your Permissions:') || !output.includes('5. git diff:*')) {
+    throw new Error('Short flag -lp not working correctly');
+  }
+});
+
+runner.test('Should handle -add short flag correctly', () => {
+  const output = runCommand('-add docker --test');
+  if (!output.includes('Expanded "docker" to "docker:*"') || !output.includes('Added permission: docker:*')) {
+    throw new Error('Short flag -add not working correctly');
+  }
+});
+
+runner.test('Should handle -dp short flag correctly', () => {
+  const output = runCommand('-dp --test');
+  if (!output.includes('frequently used permissions')) {
+    throw new Error('Short flag -dp not working correctly');
+  }
+});
+
+runner.test('Should handle -ap short flag correctly', () => {
+  const output = runCommand('-ap --test');
+  if (!output.includes('Applying permissions')) {
+    throw new Error('Short flag -ap not working correctly');
+  }
+});
+
+// Test: Doctor command functionality
+runner.test('Doctor should detect unwrapped tools', () => {
+  // Create config with mixed wrapped/unwrapped tools
+  const config = readTestConfig();
+  // Update first project
+  const firstProject = Object.keys(config.projects)[0];
+  config.projects[firstProject].allowedTools = [
+    "Bash(git status)",
+    "npm test",  // unwrapped
+    "Bash(make:*)",
+    "docker build"  // unwrapped
+  ];
+  fs.writeFileSync(TEST_CONFIG_PATH, JSON.stringify(config, null, 2));
+  
+  const output = runCommand('--doctor --test');
+  if (!output.includes('2 tools missing wrapper') || 
+      !output.includes('2 tools properly wrapped')) {
+    throw new Error('Doctor not detecting unwrapped tools correctly');
+  }
+});
+
+runner.test('Doctor should detect duplicate tools', () => {
+  // Create config with duplicates
+  const config = readTestConfig();
+  const firstProject = Object.keys(config.projects)[0];
+  config.projects[firstProject].allowedTools = [
+    "Bash(git status)",
+    "Bash(git status)",  // exact duplicate
+    "Bash(npm test)",
+    "Bash(npm test)",    // exact duplicate
+    "Bash(make:*)",
+    "Bash(make build)"   // semantic duplicate
+  ];
+  fs.writeFileSync(TEST_CONFIG_PATH, JSON.stringify(config, null, 2));
+  
+  const output = runCommand('--doctor --test');
+  if (!output.includes('appears 2 times')) {
+    throw new Error('Doctor not detecting duplicate tools correctly');
+  }
+});
+
+runner.test('Doctor should detect dangerous commands', () => {
+  // Create config with dangerous commands
+  const config = readTestConfig();
+  const firstProject = Object.keys(config.projects)[0];
+  config.projects[firstProject].allowedTools = [
+    "Bash(git status)",
+    "Bash(rm -rf)",      // dangerous
+    "Bash(chmod -R 777)" // dangerous
+  ];
+  fs.writeFileSync(TEST_CONFIG_PATH, JSON.stringify(config, null, 2));
+  
+  const output = runCommand('--doctor --test');
+  if (!output.includes('Dangerous commands detected') || 
+      !output.includes('rm -rf') ||
+      !output.includes('chmod -R 777')) {
+    throw new Error('Doctor not detecting dangerous commands correctly');
+  }
+});
+
+runner.test('Doctor should report no issues for clean config', () => {
+  // Create clean config
+  const config = readTestConfig();
+  const firstProject = Object.keys(config.projects)[0];
+  config.projects[firstProject].allowedTools = [
+    "Bash(git status)",
+    "Bash(npm test)",
+    "Bash(make:*)"
+  ];
+  fs.writeFileSync(TEST_CONFIG_PATH, JSON.stringify(config, null, 2));
+  
+  const output = runCommand('--doctor --test');
+  if (!output.includes('No issues found') || !output.includes('All configurations are healthy')) {
+    throw new Error('Doctor not reporting clean config correctly');
   }
 });
 

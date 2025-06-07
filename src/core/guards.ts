@@ -31,9 +31,9 @@ const DANGEROUS_COMMANDS = [
   'rm -fr',
   'rm -r',
   'mv /*',
-  'chmod -R 777',
+  'chmod -r 777',  // lowercase since we normalize
   'chmod 777',
-  'chown -R',
+  'chown -r',      // lowercase since we normalize
   'find / -delete',
   'find . -delete',
   'find / -exec rm',
@@ -54,7 +54,7 @@ const DANGEROUS_COMMANDS = [
 const DANGEROUS_PATTERNS = [
   /rm\s+-[a-z]*r[a-z]*f?\s*\/(?:\s|$)/, // rm with recursive and root
   />\s*\/(?:etc|usr|bin|sbin|lib|dev|proc|sys)/, // Overwriting system files
-  /chmod\s+-?R?\s*777/, // Making everything world-writable
+  /chmod\s+-?r?\s*777/, // Making everything world-writable (lowercase r)
   /find\s+\/.*-delete/, // Find with delete on root
   /curl.*\|\s*(?:bash|sh)/, // Piping curl to shell
   /wget.*\|\s*(?:bash|sh)/ // Piping wget to shell
@@ -186,6 +186,29 @@ export function filterBlockedCommands(commands: string[]): {
  */
 export function getDangerDescription(command: string): string {
   const normalized = normalizePermission(command).toLowerCase().trim();
+  
+  // Special handling for wildcards that include blocked commands
+  if (normalized.includes(':*')) {
+    const base = normalized.split(':')[0];
+    
+    // Check if this wildcard would allow any blocked command
+    for (const blocked of BLOCKED_COMMANDS) {
+      if (blocked.startsWith(base)) {
+        return `Wildcard includes blocked command '${blocked}' which could cause irreversible damage`;
+      }
+    }
+    
+    // Check for dangerous wildcards
+    if (base === 'rm') {
+      return 'Wildcard allows ANY rm command including rm -rf /';
+    }
+    if (base === 'chmod') {
+      return 'Wildcard allows ANY chmod command including chmod -r 777 /';
+    }
+    if (base === 'find') {
+      return 'Wildcard allows ANY find command including destructive -delete operations';
+    }
+  }
   
   if (normalized.includes('rm')) {
     if (normalized.includes('-rf /') || normalized.includes('-fr /')) {

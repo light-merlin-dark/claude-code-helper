@@ -6,10 +6,9 @@
   "projects": {
     "/test/project1": {
       "allowedTools": [
-        "Bash(make:*)",
-        "Bash(npm run build:*)",
-        "Bash(make:*)",
-        "Bash(git status)"
+        "Bash(git status)",
+        "Bash(npm test)",
+        "Bash(make:*)"
       ],
       "history": [],
       "dontCrawlDirectory": false,

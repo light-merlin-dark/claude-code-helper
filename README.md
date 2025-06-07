@@ -95,6 +95,16 @@ Check version history:
 cch --changelog                    # View recent changes and updates
 ```
 
+Diagnose and fix configuration issues:
+```bash
+cch --doctor                       # Find and fix issues in your Claude config
+```
+
+The doctor command will:
+- Detect inconsistent tool wrapping (some with `Bash()`, some without)
+- Find duplicate tool entries
+- Identify dangerous commands
+- Offer to fix all issues with interactive prompts
 
 ### Cleanup
 
@@ -127,6 +137,7 @@ For convenience, all commands have short aliases:
 | `--restore-config` | `-rc` | Restore backup |
 | `--config` | `-c` | View configuration |
 | `--changelog` | - | View version history |
+| `--doctor` | - | Diagnose and fix config issues |
 | `--delete-data` | `-dd` | Delete all CCH data |
 | `--name` | `-n` | Specify backup name |
 | `--force` | `-f` | Skip confirmations |

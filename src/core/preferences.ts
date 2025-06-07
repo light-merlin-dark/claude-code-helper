@@ -10,6 +10,7 @@ export interface Preferences {
     backupBeforeApply?: boolean;
     verboseLogging?: boolean;
     suppressDangerWarnings?: boolean;
+    suppressedDangerousCommands?: string[];
   };
   display?: {
     useColors?: boolean;
@@ -23,7 +24,8 @@ const DEFAULT_PREFERENCES: Preferences = {
     showChangeSummary: true,
     backupBeforeApply: true,
     verboseLogging: false,
-    suppressDangerWarnings: false
+    suppressDangerWarnings: false,
+    suppressedDangerousCommands: []
   },
   display: {
     useColors: true,
