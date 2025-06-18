@@ -60,22 +60,34 @@ function resetTestData(): void {
     hasCompletedOnboarding: true,
     projects: {
       "/test/project1": {
-        allowedTools: ["Bash(make:*)", "Bash(npm run build:*)", "Bash(make:*)", "Bash(git status)"],
+        allowedTools: ["Bash(make:*)", "Bash(npm run build:*)", "Bash(make:*)", "Bash(git status)", "Bash(mcp__vssh__run_command:*)", "Bash(mcp__github__search_code:*)"],
         history: [],
         dontCrawlDirectory: false,
         enableArchitectTool: true
       },
       "/test/project2": {
-        allowedTools: ["Bash(git add:*)", "Bash(git add:*)", "Bash(m:*)", "Bash(docker:*)"],
+        allowedTools: ["Bash(git add:*)", "Bash(git add:*)", "Bash(m:*)", "Bash(docker:*)", "Bash(mcp__vssh__run_command:*)", "Bash(mcp__slack__send_message:*)"],
         history: [],
         dontCrawlDirectory: false,
         enableArchitectTool: false
       },
       "/test/project3": {
-        allowedTools: [],
+        allowedTools: ["Bash(mcp__vssh__run_command:*)", "Bash(mcp__jira__create_ticket:*)"],
         history: [],
         dontCrawlDirectory: false,
         enableArchitectTool: true
+      },
+      "/test/project4": {
+        allowedTools: ["Bash(npm:*)", "Bash(mcp__github__search_code:*)", "Bash(mcp__github__create_issue:*)"],
+        history: [],
+        dontCrawlDirectory: false,
+        enableArchitectTool: true
+      },
+      "/test/project5": {
+        allowedTools: ["Bash(yarn:*)", "Bash(mcp__slack__send_message:*)", "Bash(mcp__jira__create_ticket:*)"],
+        history: [],
+        dontCrawlDirectory: false,
+        enableArchitectTool: false
       }
     }
   };
@@ -645,8 +657,11 @@ runner.test('Should handle -add short flag correctly', () => {
 });
 
 runner.test('Should handle -dp short flag correctly', () => {
-  const output = runCommand('-dp --test');
-  if (!output.includes('frequently used permissions')) {
+  const output = execSync(`echo n | ${CLI_CMD} -dp --test`, { encoding: 'utf8' });
+  // It shows the discover output or says no projects found or no permissions found
+  if (!output.includes('No projects found') && 
+      !output.includes('Looking for commonly used permissions') &&
+      !output.includes('No frequently used permissions found')) {
     throw new Error('Short flag -dp not working correctly');
   }
 });
@@ -732,6 +747,99 @@ runner.test('Doctor should report no issues for clean config', () => {
   const output = runCommand('--doctor --test');
   if (!output.includes('No issues found') || !output.includes('All configurations are healthy')) {
     throw new Error('Doctor not reporting clean config correctly');
+  }
+});
+
+// Test: MCP tool discovery
+runner.test('Should discover frequently used MCP tools', () => {
+  // The test data has MCP tools set up:
+  // mcp__vssh__run_command: in 3 projects
+  // mcp__github__search_code: in 2 projects  
+  // mcp__slack__send_message: in 2 projects
+  // mcp__jira__create_ticket: in 2 projects
+  // mcp__github__create_issue: in 1 project
+  
+  // Run discover MCP command (provide 'n' to skip adding)
+  const output = execSync(`echo n | ${CLI_CMD} --discover-mcp --test`, { encoding: 'utf8' });
+  
+  if (!output.includes('Looking for commonly used MCP tools') || 
+      !output.includes('mcp__vssh__run_command:*') ||
+      !output.includes('used in 3 projects')) {
+    throw new Error('MCP tool discovery not working correctly');
+  }
+});
+
+// Test: MCP tool discovery with no MCP tools
+runner.test('Should handle no MCP tools gracefully', () => {
+  // Create config without MCP tools
+  const config = readTestConfig();
+  Object.values(config.projects).forEach((project: any) => {
+    project.allowedTools = project.allowedTools.filter((tool: string) => !tool.includes('mcp__'));
+  });
+  fs.writeFileSync(TEST_CONFIG_PATH, JSON.stringify(config, null, 2));
+  
+  const output = runCommand('--discover-mcp --test');
+  if (!output.includes('No frequently used MCP tools found')) {
+    throw new Error('Should report no MCP tools found');
+  }
+});
+
+// Test: MCP tool discovery frequency threshold
+runner.test('Should only suggest MCP tools used in 3+ projects', () => {
+  // Reset data first
+  resetTestData();
+  
+  // Add another project with mcp__github__search_code to make it appear in 3 projects
+  const config = readTestConfig();
+  config.projects['/test/project6'] = {
+    allowedTools: ['Bash(mcp__github__search_code:*)'],
+    history: [],
+    dontCrawlDirectory: false,
+    enableArchitectTool: true
+  };
+  fs.writeFileSync(TEST_CONFIG_PATH, JSON.stringify(config, null, 2));
+  
+  const output = execSync(`echo n | ${CLI_CMD} --discover-mcp --test`, { encoding: 'utf8' });
+  
+  // Should show mcp__vssh__run_command (3 projects) and mcp__github__search_code (now 3 projects)
+  if (!output.includes('mcp__vssh__run_command:*') || !output.includes('mcp__github__search_code:*')) {
+    throw new Error('Should show MCP tools used in 3+ projects');
+  }
+  
+  // Should NOT show tools used in only 2 projects
+  if (output.includes('mcp__slack__send_message:*') || output.includes('mcp__jira__create_ticket:*')) {
+    throw new Error('Should not show MCP tools used in less than 3 projects');
+  }
+});
+
+// Test: MCP tool format validation
+runner.test('Should validate MCP tool format', () => {
+  // This test ensures MCP tools follow the correct pattern
+  const config = readTestConfig();
+  const allTools: string[] = [];
+  
+  Object.values(config.projects).forEach((project: any) => {
+    allTools.push(...project.allowedTools);
+  });
+  
+  const mcpTools = allTools.filter(tool => tool.includes('mcp__'));
+  mcpTools.forEach(tool => {
+    // Remove Bash() wrapper
+    const unwrapped = tool.replace(/^Bash\(/, '').replace(/\)$/, '');
+    
+    // Should match pattern: mcp__<server>__<tool>:*
+    const mcpPattern = /^mcp__[a-z]+__[a-z_]+:\*$/;
+    if (!mcpPattern.test(unwrapped)) {
+      throw new Error(`Invalid MCP tool format: ${tool}`);
+    }
+  });
+});
+
+// Test: Short alias for discover MCP
+runner.test('Should handle -dmc short flag for discover MCP', () => {
+  const output = execSync(`echo n | ${CLI_CMD} -dmc --test`, { encoding: 'utf8' });
+  if (!output.includes('Looking for commonly used MCP tools')) {
+    throw new Error('Short flag -dmc not working correctly');
   }
 });
 

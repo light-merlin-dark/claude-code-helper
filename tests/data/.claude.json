@@ -6,9 +6,17 @@
   "projects": {
     "/test/project1": {
       "allowedTools": [
+        "Bash(make:*)",
+        "Bash(npm run:*)",
+        "Bash(npm test:*)",
         "Bash(git status)",
-        "Bash(npm test)",
-        "Bash(make:*)"
+        "Bash(git diff:*)",
+        "Bash(npm build)",
+        "Bash(git commit)",
+        "Bash(docker:*)",
+        "npm run build:*",
+        "mcp__vssh__run_command:*",
+        "mcp__github__search_code:*"
       ],
       "history": [],
       "dontCrawlDirectory": false,
@@ -16,20 +24,75 @@
     },
     "/test/project2": {
       "allowedTools": [
-        "Bash(git add:*)",
-        "Bash(git add:*)",
-        "Bash(m:*)",
-        "Bash(docker:*)"
+        "Bash(make:*)",
+        "Bash(npm run:*)",
+        "Bash(npm test:*)",
+        "Bash(git status)",
+        "Bash(git diff:*)",
+        "Bash(npm build)",
+        "Bash(git commit)",
+        "git add:*",
+        "m:*",
+        "docker:*",
+        "mcp__vssh__run_command:*",
+        "mcp__slack__send_message:*"
       ],
       "history": [],
       "dontCrawlDirectory": false,
       "enableArchitectTool": false
     },
     "/test/project3": {
-      "allowedTools": [],
+      "allowedTools": [
+        "Bash(make:*)",
+        "Bash(npm run:*)",
+        "Bash(npm test:*)",
+        "Bash(git status)",
+        "Bash(git diff:*)",
+        "Bash(npm build)",
+        "Bash(git commit)",
+        "Bash(docker:*)",
+        "mcp__vssh__run_command:*",
+        "mcp__jira__create_ticket:*"
+      ],
       "history": [],
       "dontCrawlDirectory": false,
       "enableArchitectTool": true
+    },
+    "/test/project4": {
+      "allowedTools": [
+        "Bash(make:*)",
+        "Bash(npm run:*)",
+        "Bash(npm test:*)",
+        "Bash(git status)",
+        "Bash(git diff:*)",
+        "Bash(npm build)",
+        "Bash(git commit)",
+        "Bash(docker:*)",
+        "npm:*",
+        "mcp__github__search_code:*",
+        "mcp__github__create_issue:*"
+      ],
+      "history": [],
+      "dontCrawlDirectory": false,
+      "enableArchitectTool": true
+    },
+    "/test/project5": {
+      "allowedTools": [
+        "Bash(make:*)",
+        "Bash(npm run:*)",
+        "Bash(npm test:*)",
+        "Bash(git status)",
+        "Bash(git diff:*)",
+        "Bash(npm build)",
+        "Bash(git commit)",
+        "Bash(docker:*)",
+        "yarn:*",
+        "mcp__slack__send_message:*",
+        "mcp__jira__create_ticket:*"
+      ],
+      "history": [],
+      "dontCrawlDirectory": false,
+      "enableArchitectTool": false
     }
   }
 }

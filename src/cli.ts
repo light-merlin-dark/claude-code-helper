@@ -10,6 +10,9 @@ import * as discover from './commands/permissions/discover';
 import { checkPermissionsOnStartup } from './commands/permissions/check';
 import { addPermission } from './commands/permissions/add';
 
+// MCP tools management
+import { discoverMcpTools } from './commands/mcp/discover';
+
 // Config management
 import * as backup from './commands/config/backup';
 import * as view from './commands/config/view';
@@ -69,6 +72,9 @@ Managing Permissions:
   -rm, --remove-permission   Remove a permission by number
   -ap, --apply-permissions   Apply permissions to all projects
 
+MCP Tools:
+  -dmc, --discover-mcp       Discover frequently used MCP tools
+
 Configuration:
   -c, --config               View current configuration and file paths
   --changelog                View recent changes
@@ -124,6 +130,10 @@ export async function handleCLI(args: string[]): Promise<void> {
     'apply-permissions': applyPermissions_,
     ap: ap,
     
+    // MCP tools commands
+    'discover-mcp': discoverMcp_,
+    dmc: dmc,
+    
     // Config management commands
     'backup-config': backupConfig_,
     bc: bc,
@@ -158,7 +168,7 @@ export async function handleCLI(args: string[]): Promise<void> {
                        !config_ && !c && !changelog_ && !doctor_ && !deleteData_ && !dd &&
                        !listPermissions_ && !lp && !discoverPermissions_ && !discover_ && !dp &&
                        !addPermission_ && !add_ && !add && !removePermission_ && !remove_ && !rm &&
-                       !applyPermissions_ && !ap;
+                       !applyPermissions_ && !ap && !discoverMcp_ && !dmc;
     
     // Only ensure base commands exist if we're not just showing help or deleting data
     const isDeletingData = deleteData_ || dd;
@@ -185,6 +195,9 @@ export async function handleCLI(args: string[]): Promise<void> {
     const isAddPermission = addPermission_ || add_ || add;
     const isRemovePermission = removePermission_ || remove_ || rm;
     const isApplyPermissions = applyPermissions_ || ap;
+    
+    // MCP tools commands
+    const isDiscoverMcp = discoverMcp_ || dmc;
 
     if (isBackup) {
       await backup.backupConfig(backupNameValue, testMode);
@@ -213,6 +226,8 @@ export async function handleCLI(args: string[]): Promise<void> {
       await manage.removeCommand(index, isForce, testMode);
     } else if (isApplyPermissions) {
       await apply.applyPermissions(testMode, false);
+    } else if (isDiscoverMcp) {
+      await discoverMcpTools(testMode);
     } else if (isConfig) {
       await view.showConfig(testMode);
     } else if (isChangelog) {

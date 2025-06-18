@@ -2,6 +2,63 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.0.0] - 2025-06-18
+
+### 🚀 Major Update - MCP Server Architecture & Clean Code Transformation
+
+This release completely transforms Claude Code Helper into an MCP-enabled tool with a clean architecture pattern, making it ready for AI agent integration while maintaining all existing CLI functionality.
+
+### Added
+- **MCP (Model Context Protocol) Support**:
+  - Can now act as an MCP server for AI agents
+  - Designed granular commands for AI integration (mcp-list, mcp-stats, mcp-add, etc.)
+  - Full MCP tool discovery and management capabilities
+  - Structured data output for all commands to support AI consumption
+  
+- **Service-Based Architecture**:
+  - Service Registry for lightweight dependency injection
+  - Structured logging with context and audit trails
+  - State management service with persistence
+  - Safety service with multi-layered validation
+  - Project scanner for efficient project discovery
+  - MCP manager for tool orchestration
+  
+- **Enhanced MCP Tool Discovery**:
+  - `--discover-mcp` / `-dmc` command to find frequently used MCP tools
+  - Automatic detection of `mcp__` prefixed tools across projects
+  - Higher threshold (3+ projects) for MCP tool suggestions
+
+- **Testing Infrastructure**:
+  - Migrated to Bun's built-in test runner for fast execution
+  - Comprehensive unit tests for all services
+  - Integration tests for service interactions
+  - End-to-end tests for CLI commands
+  - 78 tests passing with parallel execution
+
+### Changed
+- **Complete Architecture Overhaul**:
+  - Migrated from monolithic structure to service-based architecture
+  - All services now use dependency injection pattern
+  - Commands prepared for dual-mode operation (CLI and MCP)
+  - Enhanced error handling with structured error types
+  
+- **Improved Code Organization**:
+  - New directory structure: `services/`, `shared/`, `mcp/`
+  - Clear separation of concerns
+  - Type-safe service interactions
+
+### Enhanced
+- **Better Extensibility**: Easy to add new services and commands
+- **Improved Testability**: All services can be easily mocked
+- **Performance**: Services are lazy-loaded on demand
+- **Type Safety**: Full TypeScript support with strict typing
+
+### Technical Details
+- Implemented all core services from the blueprint
+- Created foundation for MCP server mode (ready for next phase)
+- Maintained 100% backward compatibility with existing CLI
+- Prepared codebase for binary compilation with Bun
+
 ## [1.2.0] - 2025-01-06
 
 ### Added
