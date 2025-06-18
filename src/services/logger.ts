@@ -3,6 +3,10 @@
  */
 
 import chalk from 'chalk';
+import pino from 'pino';
+import path from 'path';
+import fs from 'fs';
+import os from 'os';
 import { ConfigService } from './config';
 
 export enum LogLevel {
@@ -19,10 +23,37 @@ export interface LogContext {
 export class LoggerService {
   private config: ConfigService;
   private level: LogLevel;
+  private pinoLogger: pino.Logger;
+  private logDir: string;
 
   constructor(config: ConfigService) {
     this.config = config;
     this.level = this.parseLogLevel(config.get('logging.level', 'info'));
+    this.logDir = path.join(os.homedir(), '.cch', 'logs');
+    this.ensureLogDir();
+    this.pinoLogger = this.createPinoLogger();
+  }
+
+  private ensureLogDir(): void {
+    if (!fs.existsSync(this.logDir)) {
+      fs.mkdirSync(this.logDir, { recursive: true });
+    }
+  }
+
+  private createPinoLogger(): pino.Logger {
+    const logFile = path.join(this.logDir, 'cch.log');
+    
+    return pino({
+      level: this.config.get('logging.level', 'info'),
+      timestamp: pino.stdTimeFunctions.isoTime,
+      formatters: {
+        level: (label) => ({ level: label })
+      }
+    }, pino.destination({
+      dest: logFile,
+      sync: false,
+      mkdir: true
+    }));
   }
 
   private parseLogLevel(level: string): LogLevel {
@@ -64,18 +95,21 @@ export class LoggerService {
   }
 
   debug(message: string, context?: LogContext): void {
+    this.pinoLogger.debug(context || {}, message);
     if (this.shouldLog(LogLevel.DEBUG)) {
       console.log(chalk.gray(`[DEBUG] ${this.formatMessage('debug', message, context)}`));
     }
   }
 
   info(message: string, context?: LogContext): void {
+    this.pinoLogger.info(context || {}, message);
     if (this.shouldLog(LogLevel.INFO)) {
       console.log(chalk.blue(`[INFO] ${this.formatMessage('info', message, context)}`));
     }
   }
 
   warn(message: string, context?: LogContext): void {
+    this.pinoLogger.warn(context || {}, message);
     if (this.shouldLog(LogLevel.WARN)) {
       console.warn(chalk.yellow(`[WARN] ${this.formatMessage('warn', message, context)}`));
     }
@@ -86,12 +120,14 @@ export class LoggerService {
   }
 
   error(message: string, context?: LogContext): void {
+    this.pinoLogger.error(context || {}, message);
     if (this.shouldLog(LogLevel.ERROR)) {
       console.error(chalk.red(`[ERROR] ${this.formatMessage('error', message, context)}`));
     }
   }
 
   success(message: string, context?: LogContext): void {
+    this.pinoLogger.info(context || {}, `SUCCESS: ${message}`);
     // Always log success messages
     console.log(chalk.green(`✓ ${this.formatMessage('info', message, context)}`));
   }
@@ -107,6 +143,8 @@ export class LoggerService {
       ...details
     };
 
+    this.pinoLogger.warn(auditEntry, `AUDIT: ${action}`);
+    
     // Always log audit entries
     if (this.config.get('logging.format') === 'json') {
       console.log(JSON.stringify(auditEntry));
@@ -141,6 +179,33 @@ export class LoggerService {
         row.map((cell, i) => (cell || '').padEnd(widths[i])).join('')
       );
     });
+  }
+
+  /**
+   * Get the last N lines from the log file
+   */
+  async getLastLogLines(lineCount: number = 100): Promise<string[]> {
+    const logFile = path.join(this.logDir, 'cch.log');
+    
+    try {
+      if (!fs.existsSync(logFile)) {
+        return [];
+      }
+      
+      const content = await fs.promises.readFile(logFile, 'utf8');
+      const lines = content.split('\n').filter(line => line.trim());
+      return lines.slice(-lineCount);
+    } catch (error) {
+      console.error('Failed to read log file:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get the log directory path
+   */
+  getLogDir(): string {
+    return this.logDir;
   }
 
   /**

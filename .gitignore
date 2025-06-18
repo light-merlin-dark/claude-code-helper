@@ -46,6 +46,9 @@ coverage/
 # Local data (base commands)
 .cch/
 
+# Scripts folder (not for git)
+scripts/
+
 # Temporary files
 *.tmp
 *.temp
