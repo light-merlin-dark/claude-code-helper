@@ -1,10 +1,70 @@
 # Claude Code Helper
 
-A companion tool for Claude Code that helps developers manage bash command permissions and MCP tools across their projects with built-in safety features. Now with MCP (Model Context Protocol) server capabilities for AI agent integration.
+An MCP (Model Context Protocol) server and CLI tool for managing Claude Code bash command permissions and MCP tools across your projects. Provides AI agents with programmatic access to your Claude Code configuration while offering built-in safety features.
+
+## MCP Server for Claude Code
+
+Claude Code Helper functions as an MCP server, allowing AI agents to query and manage your Claude Code configurations programmatically. This enables automated permission management, tool discovery, and configuration analysis.
+
+### Add to Claude Code
+
+Add Claude Code Helper as an MCP server to your Claude Code configuration:
+
+```bash
+claude mcp add-json cch '{
+  "type": "stdio",
+  "command": "npx",
+  "args": ["@light-merlin-dark/claude-code-helper", "--mcp"],
+  "env": {"NODE_NO_WARNINGS": "1"}
+}'
+```
+
+If you have it installed globally, you can use:
+
+```bash
+claude mcp add-json cch '{
+  "type": "stdio",
+  "command": "cch",
+  "args": ["--mcp"],
+  "env": {"NODE_NO_WARNINGS": "1"}
+}'
+```
+
+### Available MCP Commands
+
+Once added as an MCP server, the following commands are available to AI agents:
+
+- **`list_permissions`** - Get all current bash command permissions
+- **`discover_permissions`** - Find frequently used permissions across projects
+- **`discover_mcp_tools`** - Find MCP tools (`mcp__*`) used in 3+ projects
+- **`get_config`** - View current configuration and file paths
+- **`analyze_safety`** - Check permissions for safety issues
+- **`get_project_stats`** - Get statistics about configured projects
+
+### MCP Usage Examples
+
+When using Claude Code with the MCP server enabled, you can ask Claude to:
+
+```
+"Check what bash permissions I have configured"
+→ Claude will use the list_permissions command
+
+"Find MCP tools I use frequently across my projects"
+→ Claude will use the discover_mcp_tools command
+
+"Analyze my permissions for safety issues"
+→ Claude will use the analyze_safety command
+
+"Show me statistics about my Claude Code projects"
+→ Claude will use the get_project_stats command
+```
+
+The MCP server enables Claude to programmatically manage your configurations without manual CLI interaction.
 
 ## What it does
 
 Claude Code requires explicit permission to run terminal commands in your projects. This tool allows developers to:
+- Act as an MCP server for AI agents to manage configurations programmatically
 - Define a base set of permissions that should be available across all projects
 - Discover and manage MCP tools used across projects
 - Smart command expansion (e.g., `docker` → `docker:*`)
@@ -12,9 +72,8 @@ Claude Code requires explicit permission to run terminal commands in your projec
 - Apply permissions to multiple projects with detailed change tracking
 - Backup and restore your Claude Code configuration
 - Keep your permissions organized and consistent
-- **NEW**: Act as an MCP server for AI agents to manage configurations programmatically
 
-## Installation
+## CLI Installation
 
 ```bash
 npm install -g @light-merlin-dark/claude-code-helper
@@ -24,8 +83,15 @@ npm i -g @light-merlin-dark/claude-code-helper
 
 ## Features
 
+### MCP Server Capabilities
+- **AI Agent Integration**: Acts as an MCP server for programmatic access to Claude Code configurations
+- **Permission Query API**: AI agents can list, discover, and analyze bash command permissions
+- **MCP Tool Discovery**: Find and manage MCP tools (`mcp__*`) used across projects via AI agents
+- **Safety Analysis**: Programmatic safety checks for dangerous commands
+- **Configuration Management**: Query and analyze Claude Code configurations through MCP protocol
+
+### CLI Features
 - **Permission Management**: Define and apply bash command permissions across all your Claude Code projects
-- **MCP Tool Discovery**: Find and manage MCP tools (`mcp__*`) used across projects
 - **Smart Command Expansion**: Automatically expands simple commands (e.g., `make` → `make:*`)
 - **Safety Guards**: Blocks dangerous commands like `rm -rf /` and warns about risky ones
 - **Detailed Change Tracking**: See exactly what permissions were added or removed per project
@@ -33,16 +99,16 @@ npm i -g @light-merlin-dark/claude-code-helper
 - **Smart Discovery**: Find permissions and MCP tools you use frequently across projects
 - **Backup/Restore**: Save snapshots of your Claude configuration before making changes
 - **User Preferences**: Configure behavior via `~/.cch/preferences.json`
-- **MCP Server Mode**: Use as an MCP server for AI agents to query and manage configurations
 
 ## Architecture
 
-Claude Code Helper now follows a clean architecture pattern with:
+Claude Code Helper follows a clean architecture pattern optimized for both CLI and MCP server operations:
+- **MCP Server Mode**: Full Model Context Protocol implementation for AI agent integration
 - **Service Registry**: Lightweight dependency injection for all services
 - **Structured Logging**: Context-aware logging with audit trails
-- **Safety Service**: Multi-layered command validation
+- **Safety Service**: Multi-layered command validation accessible via MCP and CLI
 - **State Management**: Persistent state with usage tracking
-- **MCP Integration**: Full support for Model Context Protocol
+- **Dual Interface**: Seamless operation as both CLI tool and MCP server
 
 ## Usage
 
@@ -300,8 +366,16 @@ The `--changelog` command displays:
 
 ## How It Works
 
-Claude Code stores command permissions in `~/.claude.json` for each project. This tool:
+Claude Code Helper operates in two modes to manage command permissions stored in `~/.claude.json`:
 
+### MCP Server Mode
+When configured as an MCP server in Claude Code:
+1. **Protocol Communication**: Handles MCP requests from AI agents via stdio
+2. **Command Processing**: Executes permission queries and configuration analysis
+3. **Real-time Access**: Provides immediate access to your Claude Code configuration
+4. **Safety Integration**: All MCP commands respect the same safety rules as CLI
+
+### CLI Mode & Core Functionality
 1. **Maintains a Permissions Set**: Your commonly used permissions are stored in `~/.cch/permissions.json`
 2. **Smart Expansion**: Simple commands like `docker` are automatically expanded to `docker:*`
 3. **Safety First**: Dangerous commands are blocked or require confirmation
@@ -309,7 +383,6 @@ Claude Code stores command permissions in `~/.claude.json` for each project. Thi
 5. **Preserves Project-Specific Permissions**: Existing project permissions are kept, duplicates are removed
 6. **Detailed Tracking**: Shows exactly what changed in each project
 7. **Formats Correctly**: Permissions are automatically wrapped in the required `Bash()` format for Claude Code
-8. **MCP Integration**: Can act as an MCP server for AI agents to manage configurations
 
 ## Development
 
