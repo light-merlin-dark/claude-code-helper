@@ -2,6 +2,48 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.1.0] - 2025-06-20
+
+### 🧪 Comprehensive MCP Testing Infrastructure
+
+This release establishes enterprise-grade testing for all MCP tools, ensuring fast, reliable test execution and 100% confidence that releases reflect test success.
+
+### Added
+- **Comprehensive MCP Tool Testing**:
+  - Complete test coverage for `reload-mcp`, `doctor`, and `view-logs` tools
+  - All scenarios tested through MCP interface (not direct function calls)
+  - Performance benchmarks and response time validation
+  - Error scenario testing (network timeouts, corrupted configs, edge cases)
+  
+- **Enhanced Test Infrastructure**:
+  - Robust MCP test client with proper JSON-RPC handling
+  - Isolated test environments with realistic data
+  - Integration testing for multi-tool workflows (doctor → view-logs)
+  - Concurrent operation testing and state persistence validation
+  
+- **Performance & Reliability Testing**:
+  - Response time benchmarks for each tool (<5s doctor, <3s view-logs, <10s reload-mcp)
+  - Large data handling tests (10k+ log entries)
+  - Memory usage monitoring and leak detection
+  - Concurrent request handling validation
+  
+- **Real-World Scenario Testing**:
+  - New user onboarding workflow simulation
+  - Troubleshooting scenario automation
+  - Configuration corruption recovery testing
+  - Unicode and special character handling
+
+### Enhanced
+- **MCP Test Client**: Improved error handling to distinguish between log messages and actual errors
+- **Test Execution**: Fast parallel execution with isolated environments
+- **Error Coverage**: Comprehensive testing of malformed inputs, missing dependencies, and file system errors
+
+### Technical Details
+- Implemented Phase 2 of the MCP testing plan with full coverage
+- All tests validate through MCP protocol ensuring real-world accuracy  
+- Performance thresholds established and enforced
+- Test suite provides fast feedback (<30 seconds for full suite)
+
 ## [2.0.0] - 2025-06-18
 
 ### 🚀 Major Update - MCP Server Architecture & Clean Code Transformation

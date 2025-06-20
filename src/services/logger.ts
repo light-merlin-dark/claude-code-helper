@@ -41,7 +41,9 @@ export class LoggerService {
   }
 
   private createPinoLogger(): pino.Logger {
-    const logFile = path.join(this.logDir, 'cch.log');
+    // Use date-based log file naming
+    const today = new Date().toISOString().split('T')[0];
+    const logFile = path.join(this.logDir, `cch-${today}.log`);
     
     return pino({
       level: this.config.get('logging.level', 'info'),
@@ -185,7 +187,9 @@ export class LoggerService {
    * Get the last N lines from the log file
    */
   async getLastLogLines(lineCount: number = 100): Promise<string[]> {
-    const logFile = path.join(this.logDir, 'cch.log');
+    // Get today's log file
+    const today = new Date().toISOString().split('T')[0];
+    const logFile = path.join(this.logDir, `cch-${today}.log`);
     
     try {
       if (!fs.existsSync(logFile)) {
@@ -197,6 +201,144 @@ export class LoggerService {
       return lines.slice(-lineCount);
     } catch (error) {
       console.error('Failed to read log file:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get filtered logs with advanced options
+   */
+  async getFilteredLogs(options: {
+    lines?: number;
+    level?: string;
+    search?: string;
+    date?: string; // YYYY-MM-DD format
+  } = {}): Promise<{ file: string; lines: string[]; totalMatches: number }> {
+    const { lines = 50, level, search, date } = options;
+    
+    // Determine which log file to read
+    const targetDate = date || new Date().toISOString().split('T')[0];
+    const logFile = path.join(this.logDir, `cch-${targetDate}.log`);
+    
+    try {
+      if (!fs.existsSync(logFile)) {
+        return { file: logFile, lines: [], totalMatches: 0 };
+      }
+      
+      const content = await fs.promises.readFile(logFile, 'utf8');
+      let logLines = content.split('\n').filter(line => line.trim());
+      
+      // Filter by level if specified
+      if (level) {
+        const levelUpper = level.toUpperCase();
+        logLines = logLines.filter(line => {
+          try {
+            const parsed = JSON.parse(line);
+            return parsed.level?.toUpperCase() === levelUpper || 
+                   parsed.level === this.getLevelNumber(levelUpper);
+          } catch {
+            // Fallback for non-JSON logs
+            return line.includes(`[${levelUpper}]`);
+          }
+        });
+      }
+      
+      // Filter by search text if specified
+      if (search) {
+        const searchLower = search.toLowerCase();
+        logLines = logLines.filter(line => 
+          line.toLowerCase().includes(searchLower)
+        );
+      }
+      
+      const totalMatches = logLines.length;
+      const resultLines = logLines.slice(-lines);
+      
+      return { file: logFile, lines: resultLines, totalMatches };
+    } catch (error) {
+      console.error('Failed to read log file:', error);
+      return { file: logFile, lines: [], totalMatches: 0 };
+    }
+  }
+
+  private getLevelNumber(level: string): number {
+    const levels: Record<string, number> = {
+      'TRACE': 10,
+      'DEBUG': 20,
+      'INFO': 30,
+      'WARN': 40,
+      'ERROR': 50,
+      'FATAL': 60
+    };
+    return levels[level] || 30;
+  }
+
+  /**
+   * Get log summary for diagnostics
+   */
+  async getLogSummary(date?: string): Promise<{
+    errors: number;
+    warnings: number;
+    info: number;
+    debug: number;
+    total: number;
+    file: string;
+  }> {
+    const targetDate = date || new Date().toISOString().split('T')[0];
+    const logFile = path.join(this.logDir, `cch-${targetDate}.log`);
+    
+    const summary = {
+      errors: 0,
+      warnings: 0,
+      info: 0,
+      debug: 0,
+      total: 0,
+      file: logFile
+    };
+    
+    try {
+      if (!fs.existsSync(logFile)) {
+        return summary;
+      }
+      
+      const content = await fs.promises.readFile(logFile, 'utf8');
+      const lines = content.split('\n').filter(line => line.trim());
+      
+      lines.forEach(line => {
+        try {
+          const parsed = JSON.parse(line);
+          const level = parsed.level;
+          
+          if (level === 50 || level === 'error') summary.errors++;
+          else if (level === 40 || level === 'warn') summary.warnings++;
+          else if (level === 30 || level === 'info') summary.info++;
+          else if (level === 20 || level === 'debug') summary.debug++;
+          
+          summary.total++;
+        } catch {
+          // Skip non-JSON lines
+        }
+      });
+      
+      return summary;
+    } catch (error) {
+      console.error('Failed to get log summary:', error);
+      return summary;
+    }
+  }
+
+  /**
+   * List available log files
+   */
+  async listLogFiles(): Promise<string[]> {
+    try {
+      const files = await fs.promises.readdir(this.logDir);
+      return files
+        .filter(file => file.startsWith('cch-') && file.endsWith('.log'))
+        .sort()
+        .reverse(); // Most recent first
+    } catch (error) {
+      console.error('Failed to list log files:', error);
       return [];
     }
   }

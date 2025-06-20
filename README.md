@@ -34,6 +34,9 @@ claude mcp add-json cch '{
 
 Once added as an MCP server, the following commands are available to AI agents:
 
+- **`reload-mcp`** - Reload MCP configurations from Claude CLI
+- **`doctor`** - Run comprehensive system diagnostics and health checks  
+- **`view-logs`** - View and filter Claude Code Helper log files
 - **`list_permissions`** - Get all current bash command permissions
 - **`discover_permissions`** - Find frequently used permissions across projects
 - **`discover_mcp_tools`** - Find MCP tools (`mcp__*`) used in 3+ projects
@@ -46,6 +49,15 @@ Once added as an MCP server, the following commands are available to AI agents:
 When using Claude Code with the MCP server enabled, you can ask Claude to:
 
 ```
+"Use CCH to reload the aia MCP"
+→ Claude will use the reload-mcp command
+
+"Run diagnostics on my Claude Code Helper setup"
+→ Claude will use the doctor command
+
+"Show me recent error logs from CCH"
+→ Claude will use the view-logs command with error filtering
+
 "Check what bash permissions I have configured"
 → Claude will use the list_permissions command
 
@@ -153,6 +165,14 @@ Discover frequently used MCP tools:
 ```bash
 cch --discover-mcp         # Find MCP tools used in 3+ projects
 cch -dmc                   # Short alias
+```
+
+Reload MCP configurations:
+```bash
+cch --reload-mcp           # Interactive selection
+cch -rmc                   # Short alias
+cch -rmc aia               # Reload specific MCP
+cch -rmc --force           # Reload all MCPs
 ```
 
 MCP tools are identified by the `mcp__` prefix (e.g., `mcp__github__search_code:*`).
@@ -416,12 +436,24 @@ npm run lint
 
 ## Testing
 
-The project uses Bun's built-in test runner for fast, parallel test execution:
-- **Unit Tests**: Test individual services in isolation
-- **Integration Tests**: Test service interactions
-- **End-to-End Tests**: Test CLI commands with real execution
+The project features comprehensive testing infrastructure with Bun's built-in test runner for fast, parallel execution:
 
-Run `bun test` to execute all tests.
+- **Unit Tests**: Test individual services and components in isolation
+- **Integration Tests**: Test service interactions and workflows  
+- **End-to-End Tests**: Test CLI commands with real execution environments
+- **MCP Protocol Tests**: Comprehensive testing of all MCP tools through JSON-RPC interface
+- **Performance Tests**: Response time benchmarks and load testing
+- **Error Scenario Tests**: Network timeouts, corrupted configs, and edge cases
+
+### Test Categories
+
+- `bun test` - Run all tests
+- `bun test:unit` - Unit tests only
+- `bun test:e2e` - End-to-end tests only  
+- `bun test:watch` - Watch mode for development
+- `bun test tests/e2e/mcp/` - MCP-specific test suite
+
+The MCP test suite validates all tools (`reload-mcp`, `doctor`, `view-logs`) through realistic scenarios with isolated test environments.
 
 ## License
 

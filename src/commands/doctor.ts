@@ -1,11 +1,14 @@
 import fs from 'fs';
 import path from 'path';
+import os from 'os';
 import { logger } from '../utils/logger';
-import { getConfigPath } from '../core/paths';
+import { getConfigPath, getDataDir } from '../core/paths';
 import { loadClaudeConfig, saveClaudeConfig } from '../core/config';
 import { isBlockedCommand, isDangerousCommand } from '../core/guards';
 import { promptUser } from '../utils/prompt';
 import * as backup from './config/backup';
+import { LoggerService } from '../services/logger';
+import { ConfigService } from '../services/config';
 
 interface AnalysisResult {
   wrapping: WrappingIssue[];
@@ -26,7 +29,13 @@ interface DuplicateIssue {
 
 export async function runDoctor(targetPath?: string, testMode: boolean = false): Promise<void> {
   try {
-    logger.info('🩺 Running Claude Code Doctor...\n');
+    logger.info('🏥 Running Claude Code Helper Doctor...\n');
+    
+    // Run comprehensive system diagnostics first
+    await runSystemDiagnostics(testMode);
+    
+    // Then analyze Claude config files
+    logger.info('\n🔍 Analyzing Claude Configuration Files...\n');
     
     // Find all Claude config files
     const configPaths = await findClaudeConfigs(targetPath);
@@ -75,6 +84,150 @@ export async function runDoctor(targetPath?: string, testMode: boolean = false):
     }
     throw error;
   }
+}
+
+async function runSystemDiagnostics(testMode: boolean): Promise<void> {
+  const report: string[] = [];
+  
+  report.push('='.repeat(50));
+  report.push('📊 System Information');
+  report.push('-'.repeat(30));
+  
+  // System info
+  const packageJson = JSON.parse(fs.readFileSync(path.join(__dirname, '../../package.json'), 'utf8'));
+  report.push(`CCH Version: ${packageJson.version}`);
+  report.push(`Platform: ${os.platform()} ${os.arch()}`);
+  report.push(`Node Version: ${process.version}`);
+  report.push(`OS Version: ${os.release()}`);
+  report.push(`Home Directory: ${os.homedir()}`);
+  report.push(`Current Directory: ${process.cwd()}`);
+  report.push(`Date: ${new Date().toISOString()}`);
+  
+  // CCH Configuration
+  report.push('\n⚙️  CCH Configuration');
+  report.push('-'.repeat(30));
+  
+  try {
+    const configService = new ConfigService();
+    const dataDir = getDataDir();
+    const configPath = path.join(dataDir, 'config.json');
+    
+    report.push(`CCH Data Directory: ${dataDir} ${fs.existsSync(dataDir) ? '✅' : '❌'}`);
+    report.push(`CCH Config Path: ${configPath} ${fs.existsSync(configPath) ? '✅' : '❌'}`);
+    
+    if (fs.existsSync(configPath)) {
+      const config = configService.getAll();
+      report.push(`Log Level: ${config.logging?.level || 'info'}`);
+      report.push(`Safety Enabled: ${config.safety?.enabled !== false ? '✅' : '❌'}`);
+    }
+  } catch (error) {
+    report.push(`Config Status: ❌ ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
+  
+  // CCH Files Check
+  report.push('\n📂 CCH Files Status');
+  report.push('-'.repeat(30));
+  
+  const dataDir = getDataDir();
+  const filesToCheck = [
+    { name: 'Preferences', path: path.join(dataDir, 'preferences.json') },
+    { name: 'Permissions', path: path.join(dataDir, 'permissions.json') },
+    { name: 'State', path: path.join(dataDir, 'state.json') },
+    { name: 'Backups Directory', path: path.join(dataDir, 'backups') }
+  ];
+  
+  for (const file of filesToCheck) {
+    const exists = fs.existsSync(file.path);
+    report.push(`${file.name}: ${exists ? '✅' : '❌'} ${file.path}`);
+  }
+  
+  // Log Analysis
+  report.push('\n📋 Log Analysis');
+  report.push('-'.repeat(30));
+  
+  try {
+    const configService = new ConfigService();
+    const loggerService = new LoggerService(configService);
+    const logSummary = await loggerService.getLogSummary();
+    const logFiles = await loggerService.listLogFiles();
+    
+    report.push(`Log Directory: ${loggerService.getLogDir()}`);
+    report.push(`Log Files Found: ${logFiles.length}`);
+    
+    if (logFiles.length > 0) {
+      report.push(`Latest Log: ${logFiles[0]}`);
+      report.push(`Today's Log Summary:`);
+      report.push(`  - Errors: ${logSummary.errors} ${logSummary.errors > 0 ? '⚠️' : '✅'}`);
+      report.push(`  - Warnings: ${logSummary.warnings}`);
+      report.push(`  - Info: ${logSummary.info}`);
+      report.push(`  - Debug: ${logSummary.debug}`);
+      report.push(`  - Total Entries: ${logSummary.total}`);
+    }
+  } catch (error) {
+    report.push(`Log Analysis: ❌ ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
+  
+  // Environment Variables
+  report.push('\n🔧 Environment Variables');
+  report.push('-'.repeat(30));
+  
+  const envVars = [
+    'CCH_LOG_LEVEL',
+    'CCH_VERBOSE',
+    'CCH_SAFETY_ENABLED',
+    'CCH_DATA_DIR',
+    'NODE_ENV'
+  ];
+  
+  for (const envVar of envVars) {
+    const value = process.env[envVar];
+    report.push(`${envVar}: ${value || '(not set)'}`);
+  }
+  
+  // Dependencies Check (basic)
+  report.push('\n📦 Dependencies Status');
+  report.push('-'.repeat(30));
+  
+  try {
+    const requiredDeps = ['@modelcontextprotocol/sdk', 'chalk', 'pino'];
+    const packageJson = JSON.parse(fs.readFileSync(path.join(__dirname, '../../package.json'), 'utf8'));
+    
+    for (const dep of requiredDeps) {
+      const installed = packageJson.dependencies[dep] || packageJson.devDependencies[dep];
+      report.push(`${dep}: ${installed ? `✅ (${installed})` : '❌'}`);
+    }
+  } catch (error) {
+    report.push(`Dependencies Check: ❌ Unable to verify`);
+  }
+  
+  // MCP Server Status
+  report.push('\n🔌 MCP Server Status');
+  report.push('-'.repeat(30));
+  
+  try {
+    const mcpServerPath = path.join(__dirname, '../../mcp-server.ts');
+    const mcpExists = fs.existsSync(mcpServerPath);
+    report.push(`MCP Server File: ${mcpExists ? '✅' : '❌'}`);
+    
+    // Check if MCP is registered in Claude config
+    if (!testMode) {
+      const claudeConfig = await loadClaudeConfig(false);
+      const mcpServers = claudeConfig.mcpServers || {};
+      const cchMcp = Object.keys(mcpServers).find(key => 
+        mcpServers[key].command?.includes('claude-code-helper') ||
+        mcpServers[key].command?.includes('cch')
+      );
+      
+      report.push(`Registered in Claude: ${cchMcp ? `✅ (as ${cchMcp})` : '❌'}`);
+    }
+  } catch (error) {
+    report.push(`MCP Status: ⚠️ Unable to verify`);
+  }
+  
+  report.push('\n' + '='.repeat(50));
+  
+  // Print the report
+  console.log(report.join('\n'));
 }
 
 async function findClaudeConfigs(targetPath?: string): Promise<string[]> {

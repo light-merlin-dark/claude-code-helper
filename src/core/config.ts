@@ -16,12 +16,24 @@ export interface ClaudeConfig {
       [key: string]: any;
     };
   };
+  mcpServers?: {
+    [name: string]: {
+      command?: string;
+      [key: string]: any;
+    };
+  };
 }
 
 export interface TestConfig {
   projects: {
     [path: string]: {
       allowedTools: string[];
+    };
+  };
+  mcpServers?: {
+    [name: string]: {
+      command?: string;
+      [key: string]: any;
     };
   };
 }

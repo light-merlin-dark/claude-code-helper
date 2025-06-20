@@ -12,6 +12,7 @@ import { addPermission } from './commands/permissions/add';
 
 // MCP tools management
 import { discoverMcpTools } from './commands/mcp/discover';
+import { McpReloadCommand } from './commands/mcp/reload';
 
 // Config management
 import * as backup from './commands/config/backup';
@@ -74,6 +75,7 @@ Managing Permissions:
 
 MCP Tools:
   -dmc, --discover-mcp       Discover frequently used MCP tools
+  -rmc, --reload-mcp         Reload MCP configuration from claude CLI
 
 Configuration:
   -c, --config               View current configuration and file paths
@@ -133,6 +135,8 @@ export async function handleCLI(args: string[]): Promise<void> {
     // MCP tools commands
     'discover-mcp': discoverMcp_,
     dmc: dmc,
+    'reload-mcp': reloadMcp_,
+    rmc: rmc,
     
     // Config management commands
     'backup-config': backupConfig_,
@@ -168,7 +172,7 @@ export async function handleCLI(args: string[]): Promise<void> {
                        !config_ && !c && !changelog_ && !doctor_ && !deleteData_ && !dd &&
                        !listPermissions_ && !lp && !discoverPermissions_ && !discover_ && !dp &&
                        !addPermission_ && !add_ && !add && !removePermission_ && !remove_ && !rm &&
-                       !applyPermissions_ && !ap && !discoverMcp_ && !dmc;
+                       !applyPermissions_ && !ap && !discoverMcp_ && !dmc && !reloadMcp_ && !rmc;
     
     // Only ensure base commands exist if we're not just showing help or deleting data
     const isDeletingData = deleteData_ || dd;
@@ -198,6 +202,7 @@ export async function handleCLI(args: string[]): Promise<void> {
     
     // MCP tools commands
     const isDiscoverMcp = discoverMcp_ || dmc;
+    const isReloadMcp = reloadMcp_ || rmc;
 
     if (isBackup) {
       await backup.backupConfig(backupNameValue, testMode);
@@ -228,6 +233,30 @@ export async function handleCLI(args: string[]): Promise<void> {
       await apply.applyPermissions(testMode, false);
     } else if (isDiscoverMcp) {
       await discoverMcpTools(testMode);
+    } else if (isReloadMcp) {
+      // Initialize services needed for reload command
+      const { registry, ServiceNames } = await import('./registry');
+      const { ConfigService } = await import('./services/config');
+      const { LoggerService } = await import('./services/logger');
+      const { PromptService } = await import('./services/prompt');
+      
+      // Create service instances
+      const config = new ConfigService();
+      const logger = new LoggerService(config);
+      const prompt = new PromptService();
+      
+      // Create and execute command
+      const reloadCommand = new McpReloadCommand(config, logger, prompt);
+      
+      // Handle reload options
+      const mcpName = typeof isReloadMcp === 'string' ? isReloadMcp : undefined;
+      const reloadOptions = {
+        name: mcpName,
+        all: !mcpName && isForce,
+        dryRun: testMode
+      };
+      
+      await reloadCommand.execute(reloadOptions);
     } else if (isConfig) {
       await view.showConfig(testMode);
     } else if (isChangelog) {

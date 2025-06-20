@@ -21,8 +21,12 @@ export function getOldBackupsDir(testMode: boolean = false): string {
   return path.join(getBaseDir(testMode), '.claude-backups');
 }
 
+export function getDataDir(testMode: boolean = false): string {
+  return path.join(getBaseDir(testMode), '.cch');
+}
+
 export function getPermissionsPath(testMode: boolean = false): string {
-  return path.join(getBaseDir(testMode), '.cch', 'permissions.json');
+  return path.join(getDataDir(testMode), 'permissions.json');
 }
 
 // Keep the old function name for now to avoid breaking changes
