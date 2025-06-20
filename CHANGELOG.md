@@ -2,6 +2,28 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.1.1] - 2025-06-20
+
+### ✨ Enhanced MCP Discovery Tools
+
+This release adds comprehensive MCP discovery capabilities directly accessible through the MCP interface, enabling AI agents to analyze and report on MCP usage across all projects.
+
+### Added
+- **`discover-mcp-tools`** MCP command: Analyze MCP tools used across projects with detailed frequency and project information
+- **`list-mcps`** MCP command: List all MCPs found across projects with usage statistics and project associations  
+- **`get-mcp-stats`** MCP command: Comprehensive statistics about MCP usage across all projects with top MCPs and tools
+
+### Enhanced
+- **MCP Server Interface**: Now exposes 6 total MCP commands for complete project analysis
+- **Structured Output**: Beautiful markdown formatting with emojis and organized information display
+- **Project Analysis**: Deep scanning of all Claude Code projects to identify MCP tool usage patterns
+
+### Technical Details
+- Leverages existing MCP Manager Service for robust project scanning
+- Provides structured data for AI agents to make informed recommendations
+- Handles edge cases gracefully when no MCPs are found
+- Performance optimized for large project collections
+
 ## [2.1.0] - 2025-06-20
 
 ### 🧪 Comprehensive MCP Testing Infrastructure
