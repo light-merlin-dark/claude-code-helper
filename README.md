@@ -37,9 +37,11 @@ Once added as an MCP server, the following commands are available to AI agents:
 - **`reload-mcp`** - Reload MCP configurations from Claude CLI
 - **`doctor`** - Run comprehensive system diagnostics and health checks  
 - **`view-logs`** - View and filter Claude Code Helper log files
+- **`discover-mcp-tools`** - Discover MCP tools used across projects with detailed analysis
+- **`list-mcps`** - List all MCPs found across projects with usage information
+- **`get-mcp-stats`** - Get comprehensive statistics about MCP usage across all projects
 - **`list_permissions`** - Get all current bash command permissions
 - **`discover_permissions`** - Find frequently used permissions across projects
-- **`discover_mcp_tools`** - Find MCP tools (`mcp__*`) used in 3+ projects
 - **`get_config`** - View current configuration and file paths
 - **`analyze_safety`** - Check permissions for safety issues
 - **`get_project_stats`** - Get statistics about configured projects
@@ -58,11 +60,17 @@ When using Claude Code with the MCP server enabled, you can ask Claude to:
 "Show me recent error logs from CCH"
 → Claude will use the view-logs command with error filtering
 
-"Check what bash permissions I have configured"
-→ Claude will use the list_permissions command
+"Show me all the MCPs I'm using across my projects"
+→ Claude will use the list-mcps command
 
 "Find MCP tools I use frequently across my projects"
-→ Claude will use the discover_mcp_tools command
+→ Claude will use the discover-mcp-tools command
+
+"Give me comprehensive statistics about my MCP usage"
+→ Claude will use the get-mcp-stats command
+
+"Check what bash permissions I have configured"
+→ Claude will use the list_permissions command
 
 "Analyze my permissions for safety issues"
 → Claude will use the analyze_safety command
