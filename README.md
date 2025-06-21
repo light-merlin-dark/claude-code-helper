@@ -33,15 +33,10 @@ Understand your Claude Code usage patterns:
 
 ### Quick Start
 ```bash
-# Add to Claude Code
-claude mcp add-json cch '{
-  "type": "stdio",
-  "command": "npx",
-  "args": ["@light-merlin-dark/claude-code-helper", "--mcp"],
-  "env": {"NODE_NO_WARNINGS": "1"}
-}'
+# Install
+npm install -g @light-merlin-dark/claude-code-helper
 
-# Or if installed globally
+# Add to Claude Code
 claude mcp add-json cch '{
   "type": "stdio",
   "command": "cch",
