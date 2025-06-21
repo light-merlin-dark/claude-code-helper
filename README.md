@@ -1,27 +1,47 @@
-# Claude Code Helper
+# Claude Code Helper (CCH)
 
-An MCP (Model Context Protocol) server and CLI tool for managing Claude Code bash command permissions and MCP tools across your projects. Provides AI agents with programmatic access to your Claude Code configuration while offering built-in safety features.
+**MCP configuration management for Claude Code - discover tools, manage permissions, and diagnose issues across all your projects.**
 
-## MCP Server for Claude Code
+Built as a native MCP server for Claude Code, CCH gives AI agents direct access to manage your configurations, analyze MCP tool usage, and maintain consistent bash permissions across your entire codebase.
 
-Claude Code Helper functions as an MCP server, allowing AI agents to query and manage your Claude Code configurations programmatically. This enables automated permission management, tool discovery, and configuration analysis.
+## 🚀 Why Claude Code Helper?
 
-### Add to Claude Code
+### Native MCP Integration
+CCH is a first-class MCP server, enabling AI agents to:
+- Reload MCP configurations without manual intervention
+- Discover MCP tools used across your projects
+- Analyze bash command permissions for safety
+- Run comprehensive diagnostics on your setup
+- View and filter logs with advanced search
 
-Add Claude Code Helper as an MCP server to your Claude Code configuration:
+### Smart Permission Management
+Manage bash permissions across all Claude Code projects:
+- Define base permissions that apply everywhere
+- Smart command expansion (`docker` → `docker:*`)
+- Safety guards against dangerous commands
+- Discover frequently used permissions
+- Track changes with detailed audit logs
 
+### Project Intelligence
+Understand your Claude Code usage patterns:
+- Find MCP tools used in multiple projects
+- Get statistics on permission usage
+- Analyze project configurations
+- Identify safety issues proactively
+
+## 🔌 Model Context Protocol (MCP) Setup
+
+### Quick Start
 ```bash
+# Add to Claude Code
 claude mcp add-json cch '{
   "type": "stdio",
   "command": "npx",
   "args": ["@light-merlin-dark/claude-code-helper", "--mcp"],
   "env": {"NODE_NO_WARNINGS": "1"}
 }'
-```
 
-If you have it installed globally, you can use:
-
-```bash
+# Or if installed globally
 claude mcp add-json cch '{
   "type": "stdio",
   "command": "cch",
@@ -30,438 +50,257 @@ claude mcp add-json cch '{
 }'
 ```
 
-### Available MCP Commands
+### Available MCP Tools
 
-Once added as an MCP server, the following commands are available to AI agents:
+#### Core Management Tools
+- `reload-mcp` - Reload MCP configurations from Claude CLI
+  - Reload specific MCP by name
+  - Reload all MCPs with `all: true`
+  - Real-time status updates
 
-- **`reload-mcp`** - Reload MCP configurations from Claude CLI
-- **`doctor`** - Run comprehensive system diagnostics and health checks  
-- **`view-logs`** - View and filter Claude Code Helper log files
-- **`discover-mcp-tools`** - Discover MCP tools used across projects with detailed analysis
-- **`list-mcps`** - List all MCPs found across projects with usage information
-- **`get-mcp-stats`** - Get comprehensive statistics about MCP usage across all projects
-- **`list_permissions`** - Get all current bash command permissions
-- **`discover_permissions`** - Find frequently used permissions across projects
-- **`get_config`** - View current configuration and file paths
-- **`analyze_safety`** - Check permissions for safety issues
-- **`get_project_stats`** - Get statistics about configured projects
+- `doctor` - Run comprehensive diagnostics and health checks
+  - System configuration analysis
+  - Permission safety validation
+  - MCP connectivity tests
+  - Actionable recommendations
+
+- `view-logs` - View Claude Code Helper logs with filtering
+  - Filter by log level (ERROR, WARN, INFO, DEBUG)
+  - Search for specific text
+  - View logs from specific dates
+  - Control number of lines returned
+
+#### MCP Discovery Tools
+- `discover-mcp-tools` - Discover MCP tools used across projects
+  - Find tools used in multiple projects
+  - Get usage statistics and frequency
+  - Project association details
+  - Optional detailed statistics
+
+- `list-mcps` - List all MCPs found across projects
+  - Usage count per MCP
+  - Project associations
+  - Tool listings per MCP
+  - Sort by usage frequency
+
+- `get-mcp-stats` - Get comprehensive MCP usage statistics
+  - Total MCPs, tools, and usage counts
+  - Top MCPs and tools by usage
+  - Group by MCP, tool, or project
+  - Cross-project analysis
 
 ### MCP Usage Examples
 
-When using Claude Code with the MCP server enabled, you can ask Claude to:
+Ask Claude to help with your setup:
 
 ```
 "Use CCH to reload the aia MCP"
-→ Claude will use the reload-mcp command
-
-"Run diagnostics on my Claude Code Helper setup"
-→ Claude will use the doctor command
-
-"Show me recent error logs from CCH"
-→ Claude will use the view-logs command with error filtering
-
-"Show me all the MCPs I'm using across my projects"
-→ Claude will use the list-mcps command
-
-"Find MCP tools I use frequently across my projects"
-→ Claude will use the discover-mcp-tools command
-
-"Give me comprehensive statistics about my MCP usage"
-→ Claude will use the get-mcp-stats command
-
-"Check what bash permissions I have configured"
-→ Claude will use the list_permissions command
-
-"Analyze my permissions for safety issues"
-→ Claude will use the analyze_safety command
-
-"Show me statistics about my Claude Code projects"
-→ Claude will use the get_project_stats command
+"Run diagnostics on my Claude Code setup"
+"Show me error logs from the last hour"
+"Find MCP tools I use frequently"
+"Give me statistics about my MCP usage"
+"Check my bash permissions for safety issues"
 ```
 
-The MCP server enables Claude to programmatically manage your configurations without manual CLI interaction.
+## ✨ Key Features
 
-## What it does
+### 🤖 MCP-Powered Intelligence
+```json
+{
+  "tool": "discover-mcp-tools",
+  "minProjectCount": 3,
+  "includeStats": true
+}
+```
 
-Claude Code requires explicit permission to run terminal commands in your projects. This tool allows developers to:
-- Act as an MCP server for AI agents to manage configurations programmatically
-- Define a base set of permissions that should be available across all projects
-- Discover and manage MCP tools used across projects
-- Smart command expansion (e.g., `docker` → `docker:*`)
-- Built-in safety guards against dangerous commands
-- Apply permissions to multiple projects with detailed change tracking
-- Backup and restore your Claude Code configuration
-- Keep your permissions organized and consistent
+Returns frequently used MCP tools across your projects:
+```
+🔍 MCP Tools Used in 3+ Projects
 
-## CLI Installation
+1. mcp__github__search_code
+   • MCP: github
+   • Tool: search_code
+   • Used in 5 projects: api-server, frontend, cli-tool (+2 more)
+   • Total usage count: 127
+
+2. mcp__aia__consult
+   • MCP: aia
+   • Tool: consult
+   • Used in 4 projects: backend, ml-service, data-pipeline (+1 more)
+   • Total usage count: 89
+```
+
+### 🛡️ Enterprise-Ready Safety
+- **Blocked Commands**: Prevents `rm -rf /`, fork bombs, disk formatting
+- **Warning System**: Confirms risky operations before execution
+- **Smart Expansion**: `docker` → `docker:*` automatically
+- **Audit Trail**: Detailed change tracking for compliance
+
+### 📊 Project Analytics
+Real-time insights into your Claude Code usage:
+- MCP tool frequency analysis
+- Permission usage patterns
+- Project configuration health
+- Cross-project statistics
+
+## 📦 Installation
 
 ```bash
+# Install globally via npm
 npm install -g @light-merlin-dark/claude-code-helper
-# or
-npm i -g @light-merlin-dark/claude-code-helper
+
+# Or use npx (no installation required)
+npx @light-merlin-dark/claude-code-helper --help
 ```
 
-## Features
+## 🚀 CLI Quick Start
 
-### MCP Server Capabilities
-- **AI Agent Integration**: Acts as an MCP server for programmatic access to Claude Code configurations
-- **Permission Query API**: AI agents can list, discover, and analyze bash command permissions
-- **MCP Tool Discovery**: Find and manage MCP tools (`mcp__*`) used across projects via AI agents
-- **Safety Analysis**: Programmatic safety checks for dangerous commands
-- **Configuration Management**: Query and analyze Claude Code configurations through MCP protocol
-
-### CLI Features
-- **Permission Management**: Define and apply bash command permissions across all your Claude Code projects
-- **Smart Command Expansion**: Automatically expands simple commands (e.g., `make` → `make:*`)
-- **Safety Guards**: Blocks dangerous commands like `rm -rf /` and warns about risky ones
-- **Detailed Change Tracking**: See exactly what permissions were added or removed per project
-- **Auto-Apply**: New permissions are immediately applied to all projects (configurable)
-- **Smart Discovery**: Find permissions and MCP tools you use frequently across projects
-- **Backup/Restore**: Save snapshots of your Claude configuration before making changes
-- **User Preferences**: Configure behavior via `~/.cch/preferences.json`
-
-## Architecture
-
-Claude Code Helper follows a clean architecture pattern optimized for both CLI and MCP server operations:
-- **MCP Server Mode**: Full Model Context Protocol implementation for AI agent integration
-- **Service Registry**: Lightweight dependency injection for all services
-- **Structured Logging**: Context-aware logging with audit trails
-- **Safety Service**: Multi-layered command validation accessible via MCP and CLI
-- **State Management**: Persistent state with usage tracking
-- **Dual Interface**: Seamless operation as both CLI tool and MCP server
-
-## Usage
+### Permission Management
 
 ```bash
-cch [options]
+# View current permissions
+cch -lp
+
+# Add new permission with smart expansion
+cch -add docker    # Becomes docker:* automatically
+
+# Discover frequently used permissions
+cch -dp
+
+# Apply permissions to all projects
+cch -ap
 ```
 
-### Managing Permissions
+### MCP Tool Discovery
 
-List your current permissions:
 ```bash
-cch --list-permissions      # or use short alias: cch -lp
+# Find MCP tools used in 3+ projects
+cch -dmc
+
+# Reload specific MCP
+cch -rmc aia
+
+# Reload all MCPs
+cch -rmc --force
 ```
 
-Add a new permission (with smart expansion and auto-apply):
+### Backup & Safety
+
 ```bash
-cch --add "docker"         # Automatically expands to "docker:*" and applies
-cch --add "npm run build"  # Multi-word commands are added as-is
+# Backup before changes
+cch -bc --name pre-update
+
+# Run diagnostics
+cch --doctor
+
+# Restore if needed
+cch -rc --name pre-update
 ```
 
-Discover frequently used permissions:
-```bash
-cch --discover             # Analyzes your projects and suggests common permissions
-cch -dp                    # Short alias
-```
+### Command Reference
 
-Remove a permission:
-```bash
-cch --remove 2             # Remove permission #2 (with confirmation)
-cch -rm 2 --force          # Remove without confirmation
-```
-
-Apply permissions to all projects:
-```bash
-cch --apply-permissions    # Apply to all projects with detailed change log
-cch -ap                    # Short alias
-```
-
-### MCP Tool Management
-
-Discover frequently used MCP tools:
-```bash
-cch --discover-mcp         # Find MCP tools used in 3+ projects
-cch -dmc                   # Short alias
-```
-
-Reload MCP configurations:
-```bash
-cch --reload-mcp           # Interactive selection
-cch -rmc                   # Short alias
-cch -rmc aia               # Reload specific MCP
-cch -rmc --force           # Reload all MCPs
-```
-
-MCP tools are identified by the `mcp__` prefix (e.g., `mcp__github__search_code:*`).
-
-### Backup and Restore
-
-Create a backup before making changes:
-```bash
-cch --backup-config                # Create default backup
-cch --backup-config --name pre-update    # Create named backup
-```
-
-Restore from a backup if needed:
-```bash
-cch --restore-config               # Restore from default backup
-cch --restore-config --name pre-update   # Restore specific backup
-```
-
-### Utility Commands
-
-View your configuration:
-```bash
-cch --config                       # View current config and file paths
-cch -c                             # Short alias
-```
-
-Check version history:
-```bash
-cch --changelog                    # View recent changes and updates
-```
-
-Diagnose and fix configuration issues:
-```bash
-cch --doctor                       # Find and fix issues in your Claude config
-```
-
-The doctor command will:
-- Detect inconsistent tool wrapping (some with `Bash()`, some without)
-- Find duplicate tool entries
-- Identify dangerous commands
-- Offer to fix all issues with interactive prompts
-
-### Cleanup
-
-Remove all Claude Code Helper data:
-```bash
-cch --delete-data                  # Delete all CCH data (requires confirmation)
-cch -dd                            # Short alias
-```
-
-This will remove:
-- Your permissions configuration
-- All backup files
-- User preferences
-- The entire `~/.cch` directory
-
-**Note**: Your Claude config (`~/.claude.json`) will be preserved.
-
-### Command Aliases
-
-For convenience, all commands have short aliases:
-
-| Long Form | Short Alias | Description |
-|-----------|-------------|-------------|
+| Command | Alias | Description |
+|---------|-------|-------------|
 | `--list-permissions` | `-lp` | List your permissions |
+| `--add-permission` | `-add` | Add permission with smart expansion |
 | `--discover` | `-dp` | Discover frequently used permissions |
 | `--discover-mcp` | `-dmc` | Discover frequently used MCP tools |
-| `--add-permission` | `-add` | Add a permission (with smart expansion) |
-| `--remove-permission` | `-rm` | Remove a permission by number |
+| `--reload-mcp` | `-rmc` | Reload MCP configurations |
 | `--apply-permissions` | `-ap` | Apply permissions to all projects |
 | `--backup-config` | `-bc` | Create backup |
-| `--restore-config` | `-rc` | Restore backup |
+| `--restore-config` | `-rc` | Restore from backup |
+| `--doctor` | - | Run diagnostics |
 | `--config` | `-c` | View configuration |
-| `--changelog` | - | View version history |
-| `--doctor` | - | Diagnose and fix config issues |
-| `--delete-data` | `-dd` | Delete all CCH data |
-| `--name` | `-n` | Specify backup name |
-| `--force` | `-f` | Skip confirmations |
 
-## File Locations
+## 🎯 Perfect for Claude Code Users
 
-- **Claude Config**: `~/.claude.json` (managed by Claude)
-- **CCH Directory**: `~/.cch/` (all CCH data)
-  - **Permissions**: `~/.cch/permissions.json`
-  - **Preferences**: `~/.cch/preferences.json`
-  - **State**: `~/.cch/state.json`
-  - **Backups**: `~/.cch/backups/`
+### Common Use Cases
+
+```bash
+# Setting up a new project
+cch -add docker         # Add Docker permissions
+cch -add npm            # Add npm permissions
+cch -add pytest         # Add pytest permissions
+cch -ap                 # Apply to all projects at once
+
+# Discovering what you already use
+cch -dp                 # Find permissions used across projects
+cch -dmc                # Find MCP tools used frequently
+
+# Managing MCP servers
+cch -rmc aia            # Reload a specific MCP
+cch --doctor            # Diagnose configuration issues
+
+# Safety first
+cch -bc                 # Backup before major changes
+cch -rc                 # Restore if something goes wrong
+```
+
+### How It Works
+
+CCH manages your Claude Code configuration in two powerful ways:
+
+**MCP Server Mode**: When added to Claude Code, CCH provides a full MCP interface that AI agents can use to manage your configuration programmatically.
+
+**CLI Mode**: Direct command-line access for manual configuration management, with smart features like command expansion and safety validation.
+
+Both modes share the same core functionality:
+- Permissions stored in `~/.cch/permissions.json`
+- Smart command expansion (`docker` → `docker:*`)
+- Safety validation for all operations
+- Detailed change tracking and audit logs
+- Automatic formatting for Claude Code compatibility
+
+## 🔧 Development
+
+```bash
+# Clone and setup
+git clone https://github.com/light-merlin-dark/claude-code-helper.git
+cd claude-code-helper
+npm install
+
+# Development workflow
+npm run dev         # Run in development mode
+npm run build       # Build for production
+npm run lint        # Type checking
+
+# Testing with Bun
+bun test            # Run all tests
+bun test:unit       # Unit tests only
+bun test:e2e        # End-to-end tests only
+bun test:watch      # Watch mode
+```
+
+### Testing Infrastructure
+
+Comprehensive test coverage including:
+- Unit tests for services and components
+- Integration tests for workflows
+- End-to-end CLI command tests
+- MCP protocol validation tests
+- Performance benchmarks
+- Error scenario coverage
+
+## 📁 Configuration Files
+
+```
+~/.claude.json         # Claude's main config (managed by Claude)
+~/.cch/                # CCH configuration directory
+  ├── permissions.json # Your base permissions
+  ├── preferences.json # User preferences
+  ├── state.json       # Usage tracking
+  └── backups/         # Configuration backups
+```
 
 ## Default Permissions
 
-If no permissions file exists, the following safe defaults are created:
-- `make:*`
-- `npm run:*`
-- `npm test:*`
-- `git status`
-- `git diff:*`
-- `git log:*`
-
-## Safety Features
-
-### Blocked Commands
-The following commands are completely blocked for safety:
-- `rm -rf /` and similar destructive commands
-- Fork bombs
-- Disk formatting commands
-- Direct disk write operations
-
-### Warning Commands
-You'll receive warnings and confirmation prompts for:
-- `rm` commands without specific paths
-- `chmod 777` and similar permission changes
-- Commands that could affect system files
-
-### Smart Expansion
-Simple commands are automatically expanded:
-- `docker` → `docker:*`
-- `npm` → `npm:*`
-- `make` → `make:*`
-
-## Examples
-
-### Setting Up Permissions for All Projects
-
-```bash
-# 1. First, backup your current configuration
-cch --backup-config --name before-setup
-
-# 2. Check your current permissions
-cch -lp
-
-# 3. Add permissions you want available in all projects
-cch -add docker    # Automatically expands to docker:* and applies
-cch -add yarn      # No need to type the :* anymore!
-cch -add pytest    # Smart expansion handles it for you
-
-# 4. See the detailed changes that were made
-# (Each add command shows what was changed in each project)
-
-# 5. If needed, restore your original config
-cch --restore-config --name before-setup
-```
-
-### Quick Permission Updates
-
-```bash
-# See what permissions you have
-cch -lp
-
-# Add a new tool with auto-apply
-cch -add cargo    # Adds cargo:* and immediately applies to all projects
-
-# The tool shows you exactly what changed in each project
-```
-
-### Discovering Common Permissions
-
-```bash
-# Let the tool analyze your projects
-cch -dp
-
-# It will show permissions used in multiple projects:
-# 1. docker:*         (used in 8 projects)
-# 2. yarn:*           (used in 6 projects)
-# 3. pytest:*         (used in 3 projects)
-
-# Select which ones to add (they'll be auto-applied)
-```
-
-### Managing MCP Tools
-
-```bash
-# Discover MCP tools used across projects
-cch -dmc
-
-# It will show MCP tools used in 3+ projects:
-# 1. mcp__github__search_code:*    (used in 5 projects)
-# 2. mcp__vssh__run_command:*      (used in 4 projects)
-
-# Select which ones to add to your base permissions
-```
-
-### Safety Examples
-
-```bash
-# Dangerous commands are blocked
-cch -add "rm -rf /"
-# ⛔ BLOCKED: "rm -rf /"
-# This command could cause irreversible system damage
-
-# Warnings for risky commands
-cch -add rm
-# ⚠️  WARNING: "rm" is a potentially dangerous permission
-# Could permanently delete files
-# Type "yes" to confirm:
-```
-
-## Features in Detail
-
-### Configuration Viewer
-The `--config` command shows you:
-- Your current base commands
-- Total number of configured projects
-- All configuration file paths (clickable in many terminals)
-- Available backup files with creation dates
-
-### Version History
-The `--changelog` command displays:
-- Recent version updates
-- New features and improvements
-- Bug fixes and changes
-
-## How It Works
-
-Claude Code Helper operates in two modes to manage command permissions stored in `~/.claude.json`:
-
-### MCP Server Mode
-When configured as an MCP server in Claude Code:
-1. **Protocol Communication**: Handles MCP requests from AI agents via stdio
-2. **Command Processing**: Executes permission queries and configuration analysis
-3. **Real-time Access**: Provides immediate access to your Claude Code configuration
-4. **Safety Integration**: All MCP commands respect the same safety rules as CLI
-
-### CLI Mode & Core Functionality
-1. **Maintains a Permissions Set**: Your commonly used permissions are stored in `~/.cch/permissions.json`
-2. **Smart Expansion**: Simple commands like `docker` are automatically expanded to `docker:*`
-3. **Safety First**: Dangerous commands are blocked or require confirmation
-4. **Auto-Apply**: New permissions are immediately applied to all projects (configurable)
-5. **Preserves Project-Specific Permissions**: Existing project permissions are kept, duplicates are removed
-6. **Detailed Tracking**: Shows exactly what changed in each project
-7. **Formats Correctly**: Permissions are automatically wrapped in the required `Bash()` format for Claude Code
-
-## Development
-
-```bash
-# Clone the repository
-git clone https://github.com/light-merlin-dark/claude-code-helper.git
-cd claude-code-helper
-
-# Install dependencies
-npm install
-
-# Build
-npm run build
-
-# Run in development
-npm run dev
-
-# Run tests with Bun
-bun test
-
-# Run specific test suites
-bun test:unit       # Unit tests only
-bun test:e2e        # End-to-end tests only
-bun test:watch      # Watch mode for development
-
-# Check TypeScript types
-npm run lint
-
-# For additional development commands, see Makefile.example
-```
-
-## Testing
-
-The project features comprehensive testing infrastructure with Bun's built-in test runner for fast, parallel execution:
-
-- **Unit Tests**: Test individual services and components in isolation
-- **Integration Tests**: Test service interactions and workflows  
-- **End-to-End Tests**: Test CLI commands with real execution environments
-- **MCP Protocol Tests**: Comprehensive testing of all MCP tools through JSON-RPC interface
-- **Performance Tests**: Response time benchmarks and load testing
-- **Error Scenario Tests**: Network timeouts, corrupted configs, and edge cases
-
-### Test Categories
-
-- `bun test` - Run all tests
-- `bun test:unit` - Unit tests only
-- `bun test:e2e` - End-to-end tests only  
-- `bun test:watch` - Watch mode for development
-- `bun test tests/e2e/mcp/` - MCP-specific test suite
-
-The MCP test suite validates all tools (`reload-mcp`, `doctor`, `view-logs`) through realistic scenarios with isolated test environments.
+Safe defaults when starting fresh:
+- `make:*` - Make commands
+- `npm run:*` - NPM scripts
+- `npm test:*` - NPM tests
+- `git status` - Git status
+- `git diff:*` - Git diffs
+- `git log:*` - Git logs
 
 ## License
 
