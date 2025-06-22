@@ -37,6 +37,10 @@ Understand your Claude Code usage patterns:
 # Install
 npm install -g @light-merlin-dark/claude-code-helper
 
+# Remove from Claude Code
+# (Currently neccessary because sometimes it's cached)
+claude mcp remove cch
+
 # Add to Claude Code
 claude mcp add-json cch '{
   "type": "stdio",
@@ -44,6 +48,8 @@ claude mcp add-json cch '{
   "args": ["--mcp"],
   "env": {"NODE_NO_WARNINGS": "1"}
 }'
+
+
 ```
 
 ### Available MCP Tools

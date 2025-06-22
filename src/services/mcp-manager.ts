@@ -37,22 +37,29 @@ export class McpManagerService {
   constructor(
     config: ConfigService,
     logger: LoggerService,
-    projectScanner: ProjectScannerService
+    projectScanner: ProjectScannerService,
+    globalConfigReader?: GlobalConfigReaderService
   ) {
     this.config = config;
     this.logger = logger;
     this.projectScanner = projectScanner;
-    this.globalConfigReader = new GlobalConfigReaderService(logger);
+    // Use provided instance or create new one (for backwards compatibility)
+    this.globalConfigReader = globalConfigReader || new GlobalConfigReaderService(logger);
   }
 
   /**
    * List all MCPs found across projects
    */
   async listMcps(): Promise<McpInfo[]> {
+    this.logger.debug('McpManagerService.listMcps called', { pid: process.pid });
+    
     // Try global config first
     const hasGlobalConfig = await this.globalConfigReader.exists();
+    this.logger.debug('Global config check', { hasGlobalConfig, pid: process.pid });
+    
     if (hasGlobalConfig) {
       try {
+        this.logger.debug('Reading MCP usage from global config');
         const mcpUsage = await this.globalConfigReader.getMcpUsage();
         const mcpInfos: McpInfo[] = [];
 
@@ -65,9 +72,18 @@ export class McpManagerService {
           });
         }
 
+        this.logger.debug('MCPs found from global config', { 
+          count: mcpInfos.length,
+          mcps: mcpInfos.map(m => m.name),
+          pid: process.pid
+        });
+        
         return mcpInfos;
       } catch (error) {
-        this.logger.warn('Failed to read global config, falling back to project scan', { error });
+        this.logger.warn('Failed to read global config, falling back to project scan', { 
+          error: error instanceof Error ? error.message : String(error),
+          pid: process.pid
+        });
       }
     }
 

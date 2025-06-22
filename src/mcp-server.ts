@@ -24,6 +24,7 @@ import { runSystemDiagnostics } from './tools/doctor';
 import { getFilteredLogs } from './tools/logs';
 import { McpManagerService } from './services/mcp-manager';
 import { ProjectScannerService } from './services/project-scanner';
+import { GlobalConfigReaderService } from './services/global-config-reader';
 
 // Initialize services
 let initialized = false;
@@ -271,8 +272,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         const config = registry.get<ConfigService>(ServiceNames.CONFIG);
         const logger = registry.get<LoggerService>(ServiceNames.LOGGER);
         const projectScanner = registry.get<ProjectScannerService>(ServiceNames.PROJECT_SCANNER);
+        const globalConfigReader = registry.get<GlobalConfigReaderService>(ServiceNames.GLOBAL_CONFIG_READER);
         
-        const mcpManager = new McpManagerService(config, logger, projectScanner);
+        const mcpManager = new McpManagerService(config, logger, projectScanner, globalConfigReader);
         const minProjectCount = params.minProjectCount || 3;
         const tools = await mcpManager.discoverFrequentTools(minProjectCount);
         
@@ -321,8 +323,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         const config = registry.get<ConfigService>(ServiceNames.CONFIG);
         const logger = registry.get<LoggerService>(ServiceNames.LOGGER);
         const projectScanner = registry.get<ProjectScannerService>(ServiceNames.PROJECT_SCANNER);
+        const globalConfigReader = registry.get<GlobalConfigReaderService>(ServiceNames.GLOBAL_CONFIG_READER);
         
-        const mcpManager = new McpManagerService(config, logger, projectScanner);
+        const mcpManager = new McpManagerService(config, logger, projectScanner, globalConfigReader);
         const mcps = await mcpManager.listMcps();
         
         if (mcps.length === 0) {
@@ -366,8 +369,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         const config = registry.get<ConfigService>(ServiceNames.CONFIG);
         const logger = registry.get<LoggerService>(ServiceNames.LOGGER);
         const projectScanner = registry.get<ProjectScannerService>(ServiceNames.PROJECT_SCANNER);
+        const globalConfigReader = registry.get<GlobalConfigReaderService>(ServiceNames.GLOBAL_CONFIG_READER);
         
-        const mcpManager = new McpManagerService(config, logger, projectScanner);
+        const mcpManager = new McpManagerService(config, logger, projectScanner, globalConfigReader);
         const stats = await mcpManager.getMcpStats({ groupBy: params.groupBy });
         
         let output = `📊 **MCP Usage Statistics**\n\n`;

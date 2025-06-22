@@ -125,6 +125,7 @@ export const ServiceNames = {
   PROJECT_SCANNER: 'projectScanner',
   MCP_MANAGER: 'mcpManager',
   PROMPT: 'prompt',
+  GLOBAL_CONFIG_READER: 'globalConfigReader',
 } as const;
 
 export type ServiceName = typeof ServiceNames[keyof typeof ServiceNames];

@@ -11,6 +11,7 @@ import { PermissionManagerService } from './services/permission-manager';
 import { ProjectScannerService } from './services/project-scanner';
 import { McpManagerService } from './services/mcp-manager';
 import { PromptService } from './services/prompt';
+import { GlobalConfigReaderService } from './services/global-config-reader';
 import { RuntimeContext } from './shared/core';
 
 export async function bootstrap(testMode: boolean = false): Promise<RuntimeContext> {
@@ -53,11 +54,17 @@ export async function bootstrap(testMode: boolean = false): Promise<RuntimeConte
     registry.get(ServiceNames.LOGGER)
   ));
 
-  // MCP manager (depends on config, logger, project scanner)
+  // Global config reader (depends on logger) - singleton for caching
+  registry.registerFactory(ServiceNames.GLOBAL_CONFIG_READER, () => new GlobalConfigReaderService(
+    registry.get(ServiceNames.LOGGER)
+  ));
+
+  // MCP manager (depends on config, logger, project scanner, global config reader)
   registry.registerFactory(ServiceNames.MCP_MANAGER, () => new McpManagerService(
     registry.get(ServiceNames.CONFIG),
     registry.get(ServiceNames.LOGGER),
-    registry.get(ServiceNames.PROJECT_SCANNER)
+    registry.get(ServiceNames.PROJECT_SCANNER),
+    registry.get(ServiceNames.GLOBAL_CONFIG_READER)
   ));
 
   // Prompt service (no dependencies, but non-singleton for testing)

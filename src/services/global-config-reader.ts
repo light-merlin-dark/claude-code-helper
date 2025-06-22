@@ -38,6 +38,11 @@ export class GlobalConfigReaderService {
   constructor(logger: LoggerService) {
     this.logger = logger;
     this.configPath = path.join(os.homedir(), '.claude.json');
+    this.logger.debug('GlobalConfigReaderService initialized', { 
+      configPath: this.configPath,
+      pid: process.pid,
+      cwd: process.cwd()
+    });
   }
 
   /**
@@ -56,15 +61,23 @@ export class GlobalConfigReaderService {
    * Get all projects from global config
    */
   async getAllProjects(): Promise<GlobalProjectInfo[]> {
+    this.logger.debug('getAllProjects called', { 
+      cacheValid: this.isCacheValid(),
+      hasCachedProjects: !!this.cache.projects,
+      configExists: fs.existsSync(this.configPath),
+      pid: process.pid
+    });
+    
     if (this.isCacheValid() && this.cache.projects) {
       return Array.from(this.cache.projects.values());
     }
 
     try {
       // Use jq to extract projects efficiently
-      const { stdout } = await execAsync(
-        `jq -r '.projects | to_entries[] | {path: .key, allowedTools: .value.allowedTools, mcpServers: .value.mcpServers, hasCompletedProjectOnboarding: .value.hasCompletedProjectOnboarding} | @json' "${this.configPath}"`
-      );
+      const jqCommand = `jq -r '.projects | to_entries[] | {path: .key, allowedTools: .value.allowedTools, mcpServers: .value.mcpServers, hasCompletedProjectOnboarding: .value.hasCompletedProjectOnboarding} | @json' "${this.configPath}"`;
+      this.logger.debug('Executing jq command', { command: jqCommand });
+      
+      const { stdout } = await execAsync(jqCommand);
 
       const projects = new Map<string, GlobalProjectInfo>();
       const lines = stdout.trim().split('\n').filter(line => line);
@@ -88,9 +101,19 @@ export class GlobalConfigReaderService {
       this.cache.projects = projects;
       this.cache.timestamp = Date.now();
 
+      this.logger.debug('Projects loaded from config', { 
+        projectCount: projects.size,
+        pid: process.pid
+      });
+
       return Array.from(projects.values());
     } catch (error) {
-      this.logger.error('Failed to read global config', { error });
+      this.logger.error('Failed to read global config', { 
+        error: error instanceof Error ? error.message : String(error),
+        configPath: this.configPath,
+        configExists: fs.existsSync(this.configPath),
+        pid: process.pid
+      });
       throw error;
     }
   }
@@ -99,10 +122,20 @@ export class GlobalConfigReaderService {
    * Get MCP usage information across all projects
    */
   async getMcpUsage(): Promise<Map<string, McpUsageInfo>> {
+    this.logger.debug('getMcpUsage called', { 
+      cacheValid: this.isCacheValid(),
+      hasCachedData: !!this.cache.mcpUsage,
+      pid: process.pid
+    });
+    
     if (this.isCacheValid() && this.cache.mcpUsage) {
+      this.logger.debug('Returning cached MCP usage', { 
+        mcpCount: this.cache.mcpUsage.size 
+      });
       return this.cache.mcpUsage;
     }
 
+    this.logger.debug('Cache miss, reading projects');
     const projects = await this.getAllProjects();
     const mcpUsage = new Map<string, McpUsageInfo>();
 
@@ -149,6 +182,13 @@ export class GlobalConfigReaderService {
     }
 
     this.cache.mcpUsage = mcpUsage;
+    
+    this.logger.debug('MCP usage calculated', { 
+      mcpCount: mcpUsage.size,
+      mcps: Array.from(mcpUsage.keys()),
+      pid: process.pid
+    });
+    
     return mcpUsage;
   }
 

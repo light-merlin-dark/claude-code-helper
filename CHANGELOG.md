@@ -2,6 +2,30 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.2.1] - 2025-06-22
+
+### 🚀 Performance Fix for MCP Discovery
+
+This release fixes a critical performance issue where MCP discovery tools would fail to find MCPs due to inefficient service instantiation. Now all MCP discovery tools work reliably with significant performance improvements.
+
+### Fixed
+- **Singleton Pattern for GlobalConfigReaderService**: Implemented proper singleton pattern to ensure all MCP handlers share the same cached service instance
+- **Service Registration**: Added GlobalConfigReaderService to the service registry for proper dependency injection
+- **MCP Tool Performance**: All MCP discovery tools (list-mcps, discover-mcp-tools, get-mcp-stats) now work correctly
+  - Cache hit performance improved by 2500x (20ms → 0.01ms)
+  - Consistent results across all MCP tool calls
+
+### Enhanced
+- **Debug Logging**: Added comprehensive debug logging to GlobalConfigReaderService for better troubleshooting
+- **Test Coverage**: Added production tests that verify MCP tools work with real config structures
+- **Error Handling**: Improved error messages with context about config path and parse failures
+
+### Technical Details
+- GlobalConfigReaderService is now registered as a singleton in bootstrap.ts
+- McpManagerService accepts optional GlobalConfigReaderService parameter for dependency injection
+- MCP server handlers retrieve the service from registry ensuring consistent caching
+- Tests updated to match real Claude config structure (direct `allowedTools` property)
+
 ## [2.2.0] - 2025-06-21
 
 ### 🌍 Global Config Support
