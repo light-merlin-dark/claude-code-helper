@@ -9,6 +9,7 @@ import { getDataDir } from '../core/paths';
 import { loadClaudeConfig } from '../core/config';
 import { ConfigService } from '../services/config';
 import { LoggerService } from '../services/logger';
+import { GlobalConfigReaderService } from '../services/global-config-reader';
 
 export async function runSystemDiagnostics(): Promise<string> {
   const report: string[] = [];
@@ -158,6 +159,30 @@ export async function runSystemDiagnostics(): Promise<string> {
     }
   } catch (error) {
     report.push(`MCP Status: ⚠️ Unable to verify`);
+  }
+  
+  // Global Claude Config Analysis
+  report.push('\n🌍 Global Claude Config');
+  report.push('-'.repeat(30));
+  
+  try {
+    const loggerService = new LoggerService(new ConfigService());
+    const globalReader = new GlobalConfigReaderService(loggerService);
+    const globalConfigPath = path.join(os.homedir(), '.claude.json');
+    
+    if (await globalReader.exists()) {
+      const stats = await globalReader.getStats();
+      report.push(`Global Config Path: ${globalConfigPath} ✅`);
+      report.push(`Config Size: ${(stats.configSize / 1024 / 1024).toFixed(2)} MB`);
+      report.push(`Total Projects: ${stats.totalProjects}`);
+      report.push(`Projects with MCPs: ${stats.projectsWithMcps}`);
+      report.push(`Total Unique MCPs: ${stats.totalMcps}`);
+      report.push(`Total MCP Tools: ${stats.totalMcpTools}`);
+    } else {
+      report.push(`Global Config Path: ${globalConfigPath} ❌`);
+    }
+  } catch (error) {
+    report.push(`Global Config: ❌ ${error instanceof Error ? error.message : 'Unable to analyze'}`);
   }
   
   // Recent Activity

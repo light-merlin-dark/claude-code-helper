@@ -2,6 +2,32 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.2.0] - 2025-06-21
+
+### 🌍 Global Config Support
+
+This release adds support for reading MCPs and tools from the global Claude config file (`~/.claude.json`), enabling CCH to provide insights across ALL your Claude Code projects, not just individual project directories.
+
+### Added
+- **Global Config Reader Service**: Efficiently reads and parses the global `~/.claude.json` file using `jq` for performance
+- **Enhanced MCP Discovery**: All MCP tools now read from global config by default, with fallback to project scanning
+- **Format Support**: Handles both standard (`mcp__name__tool`) and Bash-wrapped (`Bash(mcp__name__tool:*)`) MCP formats
+- **Production Tests**: Comprehensive test suite for read-only operations against real Claude configs
+
+### Enhanced
+- **Doctor Tool**: Now displays global config statistics including total projects, projects with MCPs, and config size
+- **MCP Manager**: Updated to use global config reader for all MCP discovery operations
+- **Performance**: Optimized for large config files (tested with 1.4MB configs, 44+ projects)
+  - Initial load: ~15ms
+  - Cached access: <1ms
+  - Smart caching with 1-minute TTL
+
+### Technical Details
+- Leverages `jq` for efficient JSON parsing of large config files
+- Implements proper error handling with fallback to project scanning
+- Supports both direct MCP format and Bash command wrapper format
+- Production-tested against real Claude installations
+
 ## [2.1.1] - 2025-06-20
 
 ### ✨ Enhanced MCP Discovery Tools

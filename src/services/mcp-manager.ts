@@ -8,6 +8,7 @@ import * as os from 'os';
 import { ConfigService } from './config';
 import { LoggerService } from './logger';
 import { ProjectScannerService, ProjectInfo } from './project-scanner';
+import { GlobalConfigReaderService } from './global-config-reader';
 
 export interface McpInfo {
   name: string;
@@ -31,6 +32,7 @@ export class McpManagerService {
   private config: ConfigService;
   private logger: LoggerService;
   private projectScanner: ProjectScannerService;
+  private globalConfigReader: GlobalConfigReaderService;
 
   constructor(
     config: ConfigService,
@@ -40,12 +42,36 @@ export class McpManagerService {
     this.config = config;
     this.logger = logger;
     this.projectScanner = projectScanner;
+    this.globalConfigReader = new GlobalConfigReaderService(logger);
   }
 
   /**
    * List all MCPs found across projects
    */
   async listMcps(): Promise<McpInfo[]> {
+    // Try global config first
+    const hasGlobalConfig = await this.globalConfigReader.exists();
+    if (hasGlobalConfig) {
+      try {
+        const mcpUsage = await this.globalConfigReader.getMcpUsage();
+        const mcpInfos: McpInfo[] = [];
+
+        for (const [mcpName, usage] of mcpUsage) {
+          mcpInfos.push({
+            name: mcpName,
+            tools: Array.from(usage.tools),
+            projects: Array.from(usage.projects),
+            usageCount: usage.projects.size
+          });
+        }
+
+        return mcpInfos;
+      } catch (error) {
+        this.logger.warn('Failed to read global config, falling back to project scan', { error });
+      }
+    }
+
+    // Fallback to project scanning
     const projects = await this.projectScanner.scanProjects();
     const mcpMap = new Map<string, McpInfo>();
 
@@ -130,6 +156,65 @@ export class McpManagerService {
    * List all MCP tools
    */
   async listMcpTools(): Promise<McpToolInfo[]> {
+    // Try global config first
+    const hasGlobalConfig = await this.globalConfigReader.exists();
+    if (hasGlobalConfig) {
+      try {
+        const projects = await this.globalConfigReader.getAllProjects();
+        const toolMap = new Map<string, McpToolInfo>();
+
+        for (const project of projects) {
+          if (project.allowedTools) {
+            for (const perm of project.allowedTools) {
+              // Handle both direct mcp__ format and Bash() wrapped format
+              let fullName = perm;
+              let mcpName = '';
+              let toolName = '';
+              
+              if (perm.startsWith('mcp__')) {
+                const parts = perm.split('__');
+                if (parts.length >= 2) {
+                  mcpName = parts[1];
+                  toolName = parts.slice(2).join('__') || 'default';
+                }
+              } else if (perm.includes('mcp__')) {
+                // Handle Bash() wrapped format
+                const match = perm.match(/mcp__([^_]+)__([^:)]+)/);
+                if (match) {
+                  mcpName = match[1];
+                  toolName = match[2];
+                  fullName = `mcp__${mcpName}__${toolName}`;
+                }
+              }
+              
+              if (mcpName) {
+                if (!toolMap.has(fullName)) {
+                  toolMap.set(fullName, {
+                    fullName,
+                    mcpName,
+                    toolName,
+                    projects: [],
+                    usageCount: 0
+                  });
+                }
+
+                const info = toolMap.get(fullName)!;
+                if (!info.projects.includes(project.path)) {
+                  info.projects.push(project.path);
+                }
+                info.usageCount++;
+              }
+            }
+          }
+        }
+
+        return Array.from(toolMap.values());
+      } catch (error) {
+        this.logger.warn('Failed to read global config, falling back to project scan', { error });
+      }
+    }
+
+    // Fallback to project scanning
     const projects = await this.projectScanner.scanProjects();
     const toolMap = new Map<string, McpToolInfo>();
 

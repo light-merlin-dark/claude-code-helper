@@ -24,6 +24,7 @@ Manage bash permissions across all Claude Code projects:
 
 ### Project Intelligence
 Understand your Claude Code usage patterns:
+- Analyze MCPs across ALL your Claude Code projects via global config
 - Find MCP tools used in multiple projects
 - Get statistics on permission usage
 - Analyze project configurations
@@ -55,6 +56,7 @@ claude mcp add-json cch '{
 
 - `doctor` - Run comprehensive diagnostics and health checks
   - System configuration analysis
+  - Global Claude config analysis (~/.claude.json)
   - Permission safety validation
   - MCP connectivity tests
   - Actionable recommendations
@@ -65,20 +67,23 @@ claude mcp add-json cch '{
   - View logs from specific dates
   - Control number of lines returned
 
-#### MCP Discovery Tools
-- `discover-mcp-tools` - Discover MCP tools used across projects
+#### MCP Discovery Tools (Global Config Aware)
+- `discover-mcp-tools` - Discover MCP tools used across ALL your projects
+  - Reads from global Claude config (~/.claude.json)
   - Find tools used in multiple projects
   - Get usage statistics and frequency
   - Project association details
   - Optional detailed statistics
 
-- `list-mcps` - List all MCPs found across projects
+- `list-mcps` - List all MCPs found across your entire workspace
+  - Analyzes global Claude config for all projects
   - Usage count per MCP
   - Project associations
   - Tool listings per MCP
   - Sort by usage frequency
 
 - `get-mcp-stats` - Get comprehensive MCP usage statistics
+  - Aggregates data from global config
   - Total MCPs, tools, and usage counts
   - Top MCPs and tools by usage
   - Group by MCP, tool, or project
