@@ -47,32 +47,32 @@ const getMcpStatsSchema = z.object({
 // Tool definitions
 const TOOLS = [
   {
-    name: 'reload-mcp',
+    name: 'mcp__cch__reload-mcp',
     description: 'Reload MCP configuration from Claude CLI',
     inputSchema: reloadMcpSchema,
   },
   {
-    name: 'doctor',
+    name: 'mcp__cch__doctor',
     description: 'Run comprehensive diagnostics and health checks for Claude Code Helper',
     inputSchema: z.object({}),
   },
   {
-    name: 'view-logs',
+    name: 'mcp__cch__view-logs',
     description: 'View Claude Code Helper logs with filtering options',
     inputSchema: viewLogsSchema,
   },
   {
-    name: 'discover-mcp-tools',
+    name: 'mcp__cch__discover-mcp-tools',
     description: 'Discover and analyze MCP tools used across projects with frequency and project details',
     inputSchema: discoverMcpToolsSchema,
   },
   {
-    name: 'list-mcps',
+    name: 'mcp__cch__list-mcps',
     description: 'List all MCPs found across projects with usage information and project associations',
     inputSchema: listMcpsSchema,
   },
   {
-    name: 'get-mcp-stats',
+    name: 'mcp__cch__get-mcp-stats',
     description: 'Get comprehensive statistics about MCP usage across all projects',
     inputSchema: getMcpStatsSchema,
   },
@@ -128,7 +128,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
   try {
     switch (name) {
-      case 'reload-mcp': {
+      case 'mcp__cch__reload-mcp': {
         const params = reloadMcpSchema.parse(args);
         
         let cliCommand = 'npx claude-code-helper -rmc';
@@ -148,7 +148,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         };
       }
       
-      case 'doctor': {
+      case 'mcp__cch__doctor': {
         const output = executeCliCommand('npx claude-code-helper --doctor');
         
         return {
@@ -159,7 +159,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         };
       }
       
-      case 'view-logs': {
+      case 'mcp__cch__view-logs': {
         const params = viewLogsSchema.parse(args);
         
         let cliCommand = 'npx claude-code-helper --view-logs';
@@ -186,7 +186,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         };
       }
       
-      case 'discover-mcp-tools': {
+      case 'mcp__cch__discover-mcp-tools': {
         const params = discoverMcpToolsSchema.parse(args);
         
         let cliCommand = 'npx claude-code-helper -dmc';
@@ -247,7 +247,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         };
       }
       
-      case 'list-mcps': {
+      case 'mcp__cch__list-mcps': {
         const params = listMcpsSchema.parse(args);
         
         // Use discover command with min-projects 1 to get all MCPs
@@ -316,7 +316,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         };
       }
       
-      case 'get-mcp-stats': {
+      case 'mcp__cch__get-mcp-stats': {
         const params = getMcpStatsSchema.parse(args);
         
         // Get all MCPs and tools

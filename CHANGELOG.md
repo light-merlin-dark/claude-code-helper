@@ -2,6 +2,28 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.2.3] - 2025-06-23
+
+### 🔧 MCP Tool Naming Fix
+
+This release fixes the MCP tool naming convention to align with Claude Code's requirements, ensuring all CCH tools are properly recognized and available in the chat interface.
+
+### Fixed
+- **MCP Tool Naming**: All MCP tools now use the proper `mcp__cch__` prefix format
+  - `mcp__cch__reload-mcp`: Reload MCP configuration  
+  - `mcp__cch__doctor`: Run diagnostics
+  - `mcp__cch__view-logs`: View logs with filtering
+  - `mcp__cch__discover-mcp-tools`: Discover frequently used MCP tools
+  - `mcp__cch__list-mcps`: List all MCPs across projects
+  - `mcp__cch__get-mcp-stats`: Get usage statistics
+- **Tool Discovery**: Tools are now properly exposed to Claude Code's MCP interface
+- **Consistency**: Aligned with Claude Code's MCP tool naming conventions
+
+### Technical Details
+- Updated MCP server to register all tools with `mcp__cch__` prefix
+- Updated tool request handlers to match the new naming scheme
+- No changes to underlying functionality - purely a naming convention fix
+
 ## [2.2.2] - 2025-06-23
 
 ### 🔧 MCP Server CLI Integration
