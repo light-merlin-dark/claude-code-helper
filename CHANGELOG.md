@@ -2,6 +2,31 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.2.2] - 2025-06-23
+
+### 🔧 MCP Server CLI Integration
+
+This release fundamentally changes how MCP tools work by routing all operations through the CLI, ensuring consistent access to user configuration files and fixing the integration issues with Claude Code's chat interface.
+
+### Fixed
+- **MCP Tools in Chat Interface**: All MCP tools now work correctly when invoked through Claude Code's chat interface
+  - `mcp__cch__list-mcps`: Lists all MCPs across projects
+  - `mcp__cch__discover-mcp-tools`: Discovers frequently used tools
+  - `mcp__cch__get-mcp-stats`: Provides usage statistics
+- **Configuration Access**: MCP server now reliably accesses `~/.claude.json` by using CLI commands internally
+- **Standardized Approach**: All MCP tools now use the same CLI-based execution pattern for consistency
+
+### Changed
+- **MCP Server Architecture**: Complete rewrite to use CLI commands instead of direct service calls
+- **CLI Enhancements**: Added support for `--min-projects` and `--stats` flags in discover command
+- **Service Initialization**: Improved service registration in discover command for proper dependency injection
+
+### Technical Details
+- MCP server handlers now execute CLI commands via `execSync` with proper environment setup
+- CLI output parsing handles ANSI color codes and various output formats
+- Consistent error handling across all MCP tool invocations
+- All tools tested and verified to work in production environment
+
 ## [2.2.1] - 2025-06-22
 
 ### 🚀 Performance Fix for MCP Discovery

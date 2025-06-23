@@ -1,86 +1,111 @@
 import path from 'path';
 import chalk from 'chalk';
-import { loadClaudeConfig } from '../../core/config';
 import { logger } from '../../utils/logger';
 import { promptUser } from '../../utils/prompt';
+import { ServiceRegistry, ServiceNames } from '../../registry';
+import { McpManagerService } from '../../services/mcp-manager';
+import { GlobalConfigReaderService } from '../../services/global-config-reader';
+import { LoggerService } from '../../services/logger';
+import { ConfigService } from '../../services/config';
+import { ProjectScannerService } from '../../services/project-scanner';
 
-interface McpToolFrequency {
-  tool: string;
-  count: number;
-  projects: string[];
+interface DiscoverOptions {
+  minProjects?: number;
+  stats?: boolean;
 }
 
 /**
  * Discover and suggest commonly used MCP tools across projects
  */
-export async function discoverMcpTools(testMode: boolean = false): Promise<void> {
-  const config = await loadClaudeConfig(testMode);
-
-  if (!config.projects || Object.keys(config.projects).length === 0) {
-    logger.warning('No projects found in Claude config');
-    return;
+export async function discoverMcpTools(testMode: boolean = false, options: DiscoverOptions = {}): Promise<void> {
+  const minProjects = options.minProjects || 3;
+  
+  // Initialize services
+  const registry = new ServiceRegistry();
+  
+  // Register config service
+  if (!registry.has(ServiceNames.CONFIG)) {
+    const config = new ConfigService();
+    registry.register(ServiceNames.CONFIG, config);
   }
-
-  // Count frequency of each MCP tool across projects
-  const mcpToolMap = new Map<string, McpToolFrequency>();
-  let totalProjects = 0;
-
-  for (const [projectPath, project] of Object.entries(config.projects)) {
-    totalProjects++;
-    const seenInProject = new Set<string>();
-
-    for (const tool of project.allowedTools || []) {
-      // Check if it's an MCP tool (contains mcp__)
-      if (!tool.includes('mcp__')) continue;
-      
-      // Normalize tool (remove Bash() wrapper if present)
-      const normalizedTool = tool.startsWith('Bash(') && tool.endsWith(')') 
-        ? tool.slice(5, -1) 
-        : tool;
-      
-      // Skip if we've already seen this tool in this project
-      if (seenInProject.has(normalizedTool)) continue;
-      seenInProject.add(normalizedTool);
-
-      // Update frequency map
-      if (!mcpToolMap.has(normalizedTool)) {
-        mcpToolMap.set(normalizedTool, { 
-          tool: normalizedTool, 
-          count: 0, 
-          projects: [] 
-        });
-      }
-      const freq = mcpToolMap.get(normalizedTool)!;
-      freq.count++;
-      freq.projects.push(path.basename(projectPath));
-    }
+  
+  // Register logger service
+  if (!registry.has(ServiceNames.LOGGER)) {
+    const config = registry.get<ConfigService>(ServiceNames.CONFIG);
+    const logger = new LoggerService(config);
+    registry.register(ServiceNames.LOGGER, logger);
   }
-
-  // Sort by frequency and filter (3+ projects for MCP tools)
-  const suggestions = Array.from(mcpToolMap.values())
-    .filter(f => f.count >= 3) // Higher threshold for MCP tools
-    .sort((a, b) => b.count - a.count)
-    .slice(0, 10); // Limit to top 10 suggestions
-
-  if (suggestions.length === 0) {
+  
+  // Register global config reader
+  if (!registry.has(ServiceNames.GLOBAL_CONFIG_READER)) {
+    const loggerService = registry.get<LoggerService>(ServiceNames.LOGGER);
+    const globalConfigReader = new GlobalConfigReaderService(loggerService);
+    registry.register(ServiceNames.GLOBAL_CONFIG_READER, globalConfigReader);
+  }
+  
+  // Register project scanner
+  if (!registry.has(ServiceNames.PROJECT_SCANNER)) {
+    const config = registry.get<ConfigService>(ServiceNames.CONFIG);
+    const loggerService = registry.get<LoggerService>(ServiceNames.LOGGER);
+    const projectScanner = new ProjectScannerService(config, loggerService);
+    registry.register(ServiceNames.PROJECT_SCANNER, projectScanner);
+  }
+  
+  // Register MCP manager
+  if (!registry.has(ServiceNames.MCP_MANAGER)) {
+    const config = registry.get<ConfigService>(ServiceNames.CONFIG);
+    const loggerService = registry.get<LoggerService>(ServiceNames.LOGGER);
+    const projectScanner = registry.get<ProjectScannerService>(ServiceNames.PROJECT_SCANNER);
+    const globalConfigReader = registry.get<GlobalConfigReaderService>(ServiceNames.GLOBAL_CONFIG_READER);
+    const mcpManager = new McpManagerService(config, loggerService, projectScanner, globalConfigReader);
+    registry.register(ServiceNames.MCP_MANAGER, mcpManager);
+  }
+  
+  const mcpManager = registry.get<McpManagerService>(ServiceNames.MCP_MANAGER);
+  
+  // Get frequently used tools
+  const tools = await mcpManager.discoverFrequentTools(minProjects);
+  
+  if (tools.length === 0) {
+    // Get total project count for better messaging
+    const allTools = await mcpManager.listMcpTools();
+    const projectSet = new Set<string>();
+    allTools.forEach(tool => tool.projects.forEach(p => projectSet.add(p)));
+    const totalProjects = projectSet.size;
+    
     logger.info(`Analyzed ${totalProjects} project(s)`);
-    logger.success('No frequently used MCP tools found that are used in 3+ projects');
+    logger.success(`No frequently used MCP tools found that are used in ${minProjects}+ projects`);
     return;
   }
+
+  // Get total project count
+  const allTools = await mcpManager.listMcpTools();
+  const projectSet = new Set<string>();
+  allTools.forEach(tool => tool.projects.forEach(p => projectSet.add(p)));
+  const totalProjects = projectSet.size;
 
   // Display suggestions
   console.log(chalk.cyan(`\nLooking for commonly used MCP tools across ${totalProjects} projects...\n`));
-  console.log(chalk.green(`Found ${suggestions.length} MCP tool(s) you use frequently:\n`));
+  console.log(chalk.green(`Found ${tools.length} MCP tool(s) you use frequently:\n`));
 
-  suggestions.forEach((tool, idx) => {
-    const projectList = tool.projects.slice(0, 3).join(', ');
+  tools.forEach((tool, idx) => {
+    const projectList = tool.projects.slice(0, 3).map(p => path.basename(p)).join(', ');
     const moreProjects = tool.projects.length > 3 ? ` (+${tool.projects.length - 3} more)` : '';
-    console.log(`  ${chalk.yellow(`${idx + 1}.`)} ${chalk.white(tool.tool)} ${chalk.gray(`(used in ${tool.count} projects)`)} ${chalk.gray(`${projectList}${moreProjects}`)}`);
+    console.log(`  ${chalk.yellow(`${idx + 1}.`)} ${chalk.white(tool.fullName)} ${chalk.gray(`(used in ${tool.projects.length} projects)`)} ${chalk.gray(`${projectList}${moreProjects}`)}`);
   });
+  
+  // If stats option is enabled, show statistics at the end
+  if (options.stats) {
+    const stats = await mcpManager.getMcpStats();
+    console.log('\n' + chalk.cyan('Statistics:'));
+    console.log(`  ${chalk.gray('•')} Total MCPs: ${stats.summary.totalMcps}`);
+    console.log(`  ${chalk.gray('•')} Total Tools: ${stats.summary.totalTools}`);
+    console.log(`  ${chalk.gray('•')} Total Usage: ${stats.summary.totalUsage}`);
+  }
 
   console.log('\n' + chalk.cyan('Select MCP tools to apply:'));
   console.log(`  ${chalk.gray('[a]')} Apply all`);
-  console.log(`  ${chalk.gray('[1-' + suggestions.length + ']')} Select specific (comma-separated)`);
+  console.log(`  ${chalk.gray('[1-' + tools.length + ']')} Select specific (comma-separated)`);
   console.log(`  ${chalk.gray('[n]')} Skip\n`);
 
   const answer = await promptUser('Your choice: ');

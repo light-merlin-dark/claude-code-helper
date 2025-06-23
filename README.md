@@ -37,12 +37,8 @@ Understand your Claude Code usage patterns:
 # Install
 npm install -g @light-merlin-dark/claude-code-helper
 
-# Remove from Claude Code
-# (Currently neccessary because sometimes it's cached)
-claude mcp remove cch
-
-# Add to Claude Code
-claude mcp add-json cch '{
+# Ensure installed correctly in Claude Code
+claude mcp remove cch 2>/dev/null || true && claude mcp add-json cch '{
   "type": "stdio",
   "command": "cch",
   "args": ["--mcp"],

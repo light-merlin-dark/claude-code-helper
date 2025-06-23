@@ -232,7 +232,16 @@ export async function handleCLI(args: string[]): Promise<void> {
     } else if (isApplyPermissions) {
       await apply.applyPermissions(testMode, false);
     } else if (isDiscoverMcp) {
-      await discoverMcpTools(testMode);
+      // Parse additional options for discover MCP
+      const minProjectsOption = options['min-projects'];
+      const statsOption = options.stats;
+      
+      const discoverOptions = {
+        minProjects: minProjectsOption ? parseInt(minProjectsOption, 10) : undefined,
+        stats: !!statsOption
+      };
+      
+      await discoverMcpTools(testMode, discoverOptions);
     } else if (isReloadMcp) {
       // Initialize services needed for reload command
       const { registry, ServiceNames } = await import('./registry');
