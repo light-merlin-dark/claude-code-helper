@@ -1,9 +1,17 @@
 import { execSync } from 'child_process';
 import chalk from 'chalk';
+import { readFileSync } from 'fs';
+import { join } from 'path';
 import { logger } from '../../utils/logger';
 
 export async function installToClaudeCode(): Promise<void> {
-  console.log(chalk.cyan('\n🚀 Installing Claude Code Helper...\n'));
+  // Get version from package.json
+  const packagePath = join(__dirname, '../../../package.json');
+  const packageJson = JSON.parse(readFileSync(packagePath, 'utf8'));
+  const version = packageJson.version;
+  
+  console.log(chalk.cyan('\n🚀 Installing Claude Code Helper...'));
+  console.log(chalk.gray(`   v${version}\n`));
   
   console.log(chalk.gray('CCH is a powerful MCP server that gives AI agents direct access to:'));
   console.log(chalk.gray('• Manage configurations across ALL your Claude Code projects'));
