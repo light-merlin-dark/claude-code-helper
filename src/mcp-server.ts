@@ -44,37 +44,104 @@ const getMcpStatsSchema = z.object({
   groupBy: z.enum(['mcp', 'tool', 'project']).optional().describe('How to group statistics'),
 });
 
-// Tool definitions
+// Tool definitions with proper JSON Schema
 const TOOLS = [
   {
     name: 'mcp__cch__reload-mcp',
     description: 'Reload MCP configuration from Claude CLI',
-    inputSchema: reloadMcpSchema,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        name: {
+          type: 'string',
+          description: 'Name of the MCP to reload'
+        },
+        all: {
+          type: 'boolean',
+          description: 'Reload all MCPs'
+        }
+      }
+    },
   },
   {
     name: 'mcp__cch__doctor',
     description: 'Run comprehensive diagnostics and health checks for Claude Code Helper',
-    inputSchema: z.object({}),
+    inputSchema: {
+      type: 'object',
+      properties: {}
+    },
   },
   {
     name: 'mcp__cch__view-logs',
     description: 'View Claude Code Helper logs with filtering options',
-    inputSchema: viewLogsSchema,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        lines: {
+          type: 'number',
+          description: 'Number of recent lines to return',
+          default: 50
+        },
+        level: {
+          type: 'string',
+          enum: ['ERROR', 'WARN', 'INFO', 'DEBUG'],
+          description: 'Filter by log level'
+        },
+        search: {
+          type: 'string',
+          description: 'Search for specific text in logs'
+        },
+        date: {
+          type: 'string',
+          description: 'Date in YYYY-MM-DD format'
+        }
+      }
+    },
   },
   {
     name: 'mcp__cch__discover-mcp-tools',
     description: 'Discover and analyze MCP tools used across projects with frequency and project details',
-    inputSchema: discoverMcpToolsSchema,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        minProjectCount: {
+          type: 'number',
+          description: 'Minimum number of projects',
+          default: 3
+        },
+        includeStats: {
+          type: 'boolean',
+          description: 'Include detailed statistics'
+        }
+      }
+    },
   },
   {
     name: 'mcp__cch__list-mcps',
     description: 'List all MCPs found across projects with usage information and project associations',
-    inputSchema: listMcpsSchema,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        includeDetails: {
+          type: 'boolean',
+          description: 'Include detailed MCP information'
+        }
+      }
+    },
   },
   {
     name: 'mcp__cch__get-mcp-stats',
     description: 'Get comprehensive statistics about MCP usage across all projects',
-    inputSchema: getMcpStatsSchema,
+    inputSchema: {
+      type: 'object',
+      properties: {
+        groupBy: {
+          type: 'string',
+          enum: ['mcp', 'tool', 'project'],
+          description: 'How to group statistics'
+        }
+      }
+    },
   },
 ];
 

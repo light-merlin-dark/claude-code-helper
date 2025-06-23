@@ -2,6 +2,28 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.3.1] - 2025-06-23
+
+### 🔧 Critical Fixes & Test Improvements
+
+### Fixed
+- **MCP Tool Schema Serialization**: Fixed JSON Schema serialization for MCP tools, resolving "0 capabilities" issue in Claude Code
+- **Test Mode Config Path**: GlobalConfigReaderService now correctly reads from test data in test mode
+- **State Service Persistence**: Simplified state saving mechanism for better reliability
+
+### Improved
+- **Test Suite Simplification**: Completely overhauled test suite for simplicity and speed
+  - Removed complex mocking in favor of real services in test mode
+  - Eliminated flaky concurrent write tests
+  - Added focused E2E tests for core workflows
+  - Leveraged Bun's native test runner capabilities
+- **Test Performance**: Tests now run significantly faster with Bun's parallel execution
+
+### Developer Experience
+- New `bun test:core` command for running essential tests quickly
+- Simplified test utilities in `tests/test-utils.ts`
+- Better test isolation and reliability
+
 ## [2.3.0] - 2025-06-23
 
 ### 🚀 Major Architecture Refactor - Separate MCP Binary

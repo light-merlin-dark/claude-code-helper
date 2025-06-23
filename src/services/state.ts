@@ -11,6 +11,7 @@ export class StateService {
   private statePath: string;
   private state: Record<string, any> = {};
   private logger: LoggerService;
+  private loaded: boolean = false;
 
   constructor(logger: LoggerService, config: ConfigService) {
     this.logger = logger;
@@ -54,12 +55,7 @@ export class StateService {
     try {
       const dir = path.dirname(this.statePath);
       await fs.promises.mkdir(dir, { recursive: true });
-
-      // Write atomically
-      const tempFile = `${this.statePath}.tmp`;
-      await fs.promises.writeFile(tempFile, JSON.stringify(this.state, null, 2));
-      await fs.promises.rename(tempFile, this.statePath);
-
+      await fs.promises.writeFile(this.statePath, JSON.stringify(this.state, null, 2));
       this.logger.debug('State saved');
     } catch (error) {
       this.logger.error('Failed to save state', { error });
@@ -68,8 +64,9 @@ export class StateService {
   }
 
   private async ensureLoaded(): Promise<void> {
-    if (Object.keys(this.state).length === 0) {
+    if (!this.loaded) {
       await this.load();
+      this.loaded = true;
     }
   }
 

@@ -35,9 +35,15 @@ export class GlobalConfigReaderService {
   } = {};
   private cacheTimeout = 60000; // 1 minute cache
 
-  constructor(logger: LoggerService) {
+  constructor(logger: LoggerService, testMode: boolean = false) {
     this.logger = logger;
-    this.configPath = path.join(os.homedir(), '.claude.json');
+    // In test mode, read from test data directory
+    if (testMode || process.env.TEST_MODE === 'true') {
+      // When running tests, cwd is already set to tests/data
+      this.configPath = path.join(process.cwd(), '.claude.json');
+    } else {
+      this.configPath = path.join(os.homedir(), '.claude.json');
+    }
     this.logger.debug('GlobalConfigReaderService initialized', { 
       configPath: this.configPath,
       pid: process.pid,

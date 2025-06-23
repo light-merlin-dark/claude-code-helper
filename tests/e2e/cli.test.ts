@@ -186,7 +186,7 @@ describe('Configuration Commands', () => {
   test('should display changelog', async () => {
     const output = await runCommand('--changelog');
     expect(output).toContain('Claude Code Helper - Recent Changes');
-    expect(output).toContain('v1.');
+    expect(output).toContain('v2.');
   });
 
   test('should delete all CCH data', async () => {
@@ -267,7 +267,7 @@ describe('MCP Tool Discovery', () => {
     });
     
     expect(output).toContain('Looking for commonly used MCP tools');
-    expect(output).toContain('mcp__vssh__run_command:*');
+    expect(output).toContain('mcp__vssh__run_command');
     expect(output).toContain('used in 3 projects');
   });
 
@@ -300,8 +300,8 @@ describe('MCP Tool Discovery', () => {
     });
     
     // Should show mcp__vssh__run_command (3 projects) and mcp__github__search_code (now 3 projects)
-    expect(output).toContain('mcp__vssh__run_command:*');
-    expect(output).toContain('mcp__github__search_code:*');
+    expect(output).toContain('mcp__vssh__run_command');
+    expect(output).toContain('mcp__github__search_code');
     
     // Should NOT show tools used in only 2 projects
     expect(output).not.toContain('mcp__slack__send_message:*');

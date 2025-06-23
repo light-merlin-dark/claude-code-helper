@@ -27,7 +27,7 @@ export async function restoreConfig(backupName?: string, testMode: boolean = fal
   const backupPath = path.join(backupsDir, filename);
 
   if (!fs.existsSync(backupPath)) {
-    throw new BackupNotFoundError(filename);
+    throw new BackupNotFoundError('Backup not found');
   }
 
   const backupContent = fs.readFileSync(backupPath, 'utf8');

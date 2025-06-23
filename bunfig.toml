@@ -1,0 +1,5 @@
+# Bun configuration for CCH
+
+[test]
+# Timeout for tests (5 seconds)
+timeout = 5000

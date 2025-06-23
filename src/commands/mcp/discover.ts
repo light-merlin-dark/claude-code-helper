@@ -39,7 +39,7 @@ export async function discoverMcpTools(testMode: boolean = false, options: Disco
   // Register global config reader
   if (!registry.has(ServiceNames.GLOBAL_CONFIG_READER)) {
     const loggerService = registry.get<LoggerService>(ServiceNames.LOGGER);
-    const globalConfigReader = new GlobalConfigReaderService(loggerService);
+    const globalConfigReader = new GlobalConfigReaderService(loggerService, testMode);
     registry.register(ServiceNames.GLOBAL_CONFIG_READER, globalConfigReader);
   }
   

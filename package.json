@@ -1,6 +1,6 @@
 {
   "name": "@light-merlin-dark/claude-code-helper",
-  "version": "2.3.0",
+  "version": "2.3.1",
   "description": "CLI tool for managing Claude Code configurations",
   "main": "dist/index.js",
   "bin": {
@@ -10,10 +10,12 @@
   },
   "scripts": {
     "build": "tsc",
-    "dev": "ts-node src/index.ts",
+    "dev": "bun run src/index.ts",
     "test": "bun test",
     "test:watch": "bun test --watch",
     "test:coverage": "bun test --coverage",
+    "test:core": "bun test tests/e2e/core-workflow.test.ts",
+    "test:simple": "bun run tests/run-simple.ts",
     "test:unit": "bun test tests/unit",
     "test:e2e": "bun test tests/e2e",
     "test:integration": "bun test tests/integration",

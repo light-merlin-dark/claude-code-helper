@@ -19,7 +19,7 @@ const METHODS = {
   }
 } as const;
 
-async function callMcp(target: string, method: string, params?: any) {
+export async function callMcp(target: string, method: string, params?: any): Promise<string> {
   return new Promise((resolve, reject) => {
     // Check if target is a TypeScript file
     const isTypeScript = target.endsWith('.ts');
@@ -52,7 +52,6 @@ async function callMcp(target: string, method: string, params?: any) {
         console.error('MCP process exited with code:', code);
         if (error) console.error('Error:', error);
       }
-      console.log(response);
       resolve(response);
     });
 

@@ -56,7 +56,8 @@ export async function bootstrap(testMode: boolean = false): Promise<RuntimeConte
 
   // Global config reader (depends on logger) - singleton for caching
   registry.registerFactory(ServiceNames.GLOBAL_CONFIG_READER, () => new GlobalConfigReaderService(
-    registry.get(ServiceNames.LOGGER)
+    registry.get(ServiceNames.LOGGER),
+    testMode
   ));
 
   // MCP manager (depends on config, logger, project scanner, global config reader)

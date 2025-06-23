@@ -66,7 +66,11 @@ export class ConfigService {
     
     // Override data directory for test mode
     if (testMode) {
-      this.config.dataDir = path.join(os.tmpdir(), 'cch-test', Date.now().toString());
+      if (process.env.CCH_TEST_DIR) {
+        this.config.dataDir = process.env.CCH_TEST_DIR;
+      } else {
+        this.config.dataDir = path.join(os.tmpdir(), 'cch-test', Date.now().toString());
+      }
     }
   }
 
