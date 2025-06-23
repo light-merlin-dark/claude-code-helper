@@ -2,6 +2,33 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.3.0] - 2025-06-23
+
+### 🚀 Major Architecture Refactor - Separate MCP Binary
+
+This release follows the successful AIA blueprint approach by introducing a dedicated MCP server binary and simplified installation process, making CCH more reliable and easier to use.
+
+### Added
+- **Dedicated MCP Binary**: New `cch-mcp` binary specifically for MCP server operations
+- **Automated Installation**: New `cch --install` command that automatically configures Claude Code
+- **Uninstall Command**: Added `cch --uninstall` for easy removal
+
+### Changed
+- **Architecture**: Separated CLI and MCP server into distinct binaries (following AIA pattern)
+- **Installation Process**: Simplified from manual JSON configuration to single command
+- **MCP Registration**: Now uses `cch-mcp` instead of `cch --mcp`
+
+### Fixed
+- **Tool Discovery**: Claude Code now properly detects all CCH tools on startup
+- **Binary Execution**: Eliminated the confusing `--mcp` flag requirement
+- **Installation UX**: Clear, friendly output with next steps and available tools
+
+### Developer Experience
+- Installation is now just two commands: `npm install` and `cch --install`
+- No more manual Claude MCP configuration required
+- Automatic handling of existing installations during setup
+- Clear success/error messages with actionable next steps
+
 ## [2.2.3] - 2025-06-23
 
 ### 🔧 MCP Tool Naming Fix

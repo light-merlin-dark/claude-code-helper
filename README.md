@@ -34,57 +34,52 @@ Understand your Claude Code usage patterns:
 
 ### Quick Start
 ```bash
-# Install
+# Install globally
 npm install -g @light-merlin-dark/claude-code-helper
 
-# Ensure installed correctly in Claude Code
-claude mcp remove cch 2>/dev/null || true && claude mcp add-json cch '{
-  "type": "stdio",
-  "command": "cch",
-  "args": ["--mcp"],
-  "env": {"NODE_NO_WARNINGS": "1"}
-}'
-
-
+# Install MCP server in Claude Code
+cch --install
 ```
+
+That's it! Restart Claude Code and you're ready to go.
 
 ### Available MCP Tools
 
 #### Core Management Tools
-- `reload-mcp` - Reload MCP configurations from Claude CLI
+- `mcp__cch__reload-mcp` - Reload MCP configurations from Claude CLI
   - Reload specific MCP by name
   - Reload all MCPs with `all: true`
   - Real-time status updates
 
-- `doctor` - Run comprehensive diagnostics and health checks
+- `mcp__cch__doctor` - Run comprehensive diagnostics and health checks
   - System configuration analysis
   - Global Claude config analysis (~/.claude.json)
   - Permission safety validation
   - MCP connectivity tests
   - Actionable recommendations
 
-- `view-logs` - View Claude Code Helper logs with filtering
+- `mcp__cch__view-logs` - View Claude Code Helper logs with filtering
   - Filter by log level (ERROR, WARN, INFO, DEBUG)
   - Search for specific text
   - View logs from specific dates
   - Control number of lines returned
 
 #### MCP Discovery Tools (Global Config Aware)
-- `discover-mcp-tools` - Discover MCP tools used across ALL your projects
+- `mcp__cch__discover-mcp-tools` - Discover MCP tools used across ALL your projects
   - Reads from global Claude config (~/.claude.json)
   - Find tools used in multiple projects
   - Get usage statistics and frequency
   - Project association details
   - Optional detailed statistics
 
-- `list-mcps` - List all MCPs found across your entire workspace
+- `mcp__cch__list-mcps` - List all MCPs found across your entire workspace
   - Analyzes global Claude config for all projects
   - Usage count per MCP
   - Project associations
   - Tool listings per MCP
   - Sort by usage frequency
 
-- `get-mcp-stats` - Get comprehensive MCP usage statistics
+- `mcp__cch__get-mcp-stats` - Get comprehensive MCP usage statistics
   - Aggregates data from global config
   - Total MCPs, tools, and usage counts
   - Top MCPs and tools by usage

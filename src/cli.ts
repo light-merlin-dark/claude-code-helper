@@ -13,6 +13,7 @@ import { addPermission } from './commands/permissions/add';
 // MCP tools management
 import { discoverMcpTools } from './commands/mcp/discover';
 import { McpReloadCommand } from './commands/mcp/reload';
+import { installToClaudeCode, uninstallFromClaudeCode } from './commands/mcp/install';
 
 // Config management
 import * as backup from './commands/config/backup';
@@ -61,7 +62,11 @@ Usage: cch [options]
 `;
   }
   
-  helpText += `Quick Start:
+  helpText += `Setup & Installation:
+  --install                  Install CCH as MCP server in Claude Code
+  --uninstall                Remove CCH MCP server from Claude Code
+
+Quick Start:
   cch -lp                    # See your permissions
   cch -add "docker"          # Add a permission (auto-expands to docker:*)
   cch -ap                    # Apply permissions to all projects
@@ -152,6 +157,10 @@ export async function handleCLI(args: string[]): Promise<void> {
     'version': version_,
     v: v,
     
+    // MCP installation
+    'install': install_,
+    'uninstall': uninstall_,
+    
     // Options
     n: backupName,
     name: name,
@@ -172,7 +181,8 @@ export async function handleCLI(args: string[]): Promise<void> {
                        !config_ && !c && !changelog_ && !doctor_ && !deleteData_ && !dd &&
                        !listPermissions_ && !lp && !discoverPermissions_ && !discover_ && !dp &&
                        !addPermission_ && !add_ && !add && !removePermission_ && !remove_ && !rm &&
-                       !applyPermissions_ && !ap && !discoverMcp_ && !dmc && !reloadMcp_ && !rmc;
+                       !applyPermissions_ && !ap && !discoverMcp_ && !dmc && !reloadMcp_ && !rmc &&
+                       !install_ && !uninstall_;
     
     // Only ensure base commands exist if we're not just showing help or deleting data
     const isDeletingData = deleteData_ || dd;
@@ -192,6 +202,8 @@ export async function handleCLI(args: string[]): Promise<void> {
     const isDeleteData = deleteData_ || dd;
     const backupNameValue = backupName || name;
     const isForce = force || f;
+    const isInstall = install_;
+    const isUninstall = uninstall_;
     
     // Permission commands
     const isListPermissions = listPermissions_ || lp;
@@ -274,6 +286,10 @@ export async function handleCLI(args: string[]): Promise<void> {
       await runDoctor(undefined, testMode);
     } else if (isDeleteData) {
       await cleanup.deleteData(testMode);
+    } else if (isInstall) {
+      await installToClaudeCode();
+    } else if (isUninstall) {
+      await uninstallFromClaudeCode();
     } else {
       // Show help text
       console.log(generateHelpText(testMode));

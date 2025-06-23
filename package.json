@@ -1,10 +1,11 @@
 {
   "name": "@light-merlin-dark/claude-code-helper",
-  "version": "2.2.3",
+  "version": "2.3.0",
   "description": "CLI tool for managing Claude Code configurations",
   "main": "dist/index.js",
   "bin": {
     "cch": "dist/index.js",
+    "cch-mcp": "dist/cch-mcp.js",
     "claude-code-helper": "dist/index.js"
   },
   "scripts": {
@@ -17,7 +18,7 @@
     "test:e2e": "bun test tests/e2e",
     "test:integration": "bun test tests/integration",
     "test:legacy": "ts-node tests/test.ts",
-    "prepublishOnly": "npm run build",
+    "prepublishOnly": "npm run build && chmod +x dist/index.js dist/cch-mcp.js",
     "lint": "tsc --noEmit"
   },
   "keywords": [
