@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.3.4] - 2025-06-23
+
+### 📚 README Modernization
+
+### Changed
+- **Updated MCP Tool Names**: README now reflects the simplified MCP command names (e.g., `audit`, `doctor`, `backup` instead of verbose `mcp__cch__*` prefixes)
+- **Added New Tools Documentation**: Documented new MCP tools added in v2.3.3: `backup`, `restore`, `list-projects`
+- **Comprehensive Tool Coverage**: Added complete documentation for all configuration management and bulk operation tools
+- **Streamlined Content**: Made README more concise while preserving all essential information and value propositions
+- **Enhanced Usage Examples**: Updated examples to reflect current tool capabilities and simplified command structure
+
+### Improved
+- **Tool Organization**: Better categorization of MCP tools into logical groups (Core, Discovery, Configuration, Bulk Operations)
+- **Clarity**: Simplified descriptions and removed redundant sections
+- **Accuracy**: All tool names and capabilities now match the current implementation
+
 ## [2.3.3] - 2025-06-23
 
 ### 🚀 MCP Developer Experience Improvements & Install UX

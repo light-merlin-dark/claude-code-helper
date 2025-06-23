@@ -7,33 +7,17 @@
 
 **MCP configuration management for Claude Code - discover tools, manage permissions, and diagnose issues across all your projects.**
 
-Built as a native MCP server for Claude Code, CCH gives AI agents direct access to manage your configurations, analyze MCP tool usage, and maintain consistent bash permissions across your entire codebase.
+Native MCP server that gives AI agents direct access to manage configurations, analyze MCP tool usage, and maintain consistent bash permissions across your entire codebase.
 
-## 🚀 Why Claude Code Helper?
+## 🚀 Key Capabilities
 
-### Native MCP Integration
-CCH is a first-class MCP server, enabling AI agents to:
-- Reload MCP configurations without manual intervention
-- Discover MCP tools used across your projects
-- Analyze bash command permissions for safety
-- Run comprehensive diagnostics on your setup
-- View and filter logs with advanced search
+**🤖 AI-Native Design**: First-class MCP server with 15+ tools for configuration management, diagnostics, and bulk operations.
 
-### Smart Permission Management
-Manage bash permissions across all Claude Code projects:
-- Define base permissions that apply everywhere
-- Smart command expansion (`docker` → `docker:*`)
-- Safety guards against dangerous commands
-- Discover frequently used permissions
-- Track changes with detailed audit logs
+**🛡️ Smart Safety**: Prevents dangerous commands, validates permissions, and creates automatic backups before changes.
 
-### Project Intelligence
-Understand your Claude Code usage patterns:
-- Analyze MCPs across ALL your Claude Code projects via global config
-- Find MCP tools used in multiple projects
-- Get statistics on permission usage
-- Analyze project configurations
-- Identify safety issues proactively
+**📊 Global Intelligence**: Analyzes your entire Claude Code workspace via global config, discovering usage patterns across all projects.
+
+**⚡ Bulk Operations**: Manage permissions and MCP tools across multiple projects with pattern matching and dry-run previews.
 
 ## 🔌 Model Context Protocol (MCP) Setup
 
@@ -51,45 +35,95 @@ That's it! Restart Claude Code and you're ready to go.
 ### Available MCP Tools
 
 #### Core Management Tools
-- `mcp__cch__reload-mcp` - Reload MCP configurations from Claude CLI
+- `reload-mcp` - Reload MCP configurations from Claude CLI
   - Reload specific MCP by name
   - Reload all MCPs with `all: true`
   - Real-time status updates
 
-- `mcp__cch__doctor` - Run comprehensive diagnostics and health checks
+- `doctor` - Run comprehensive diagnostics and health checks
   - System configuration analysis
   - Global Claude config analysis (~/.claude.json)
   - Permission safety validation
   - MCP connectivity tests
   - Actionable recommendations
 
-- `mcp__cch__view-logs` - View Claude Code Helper logs with filtering
+- `view-logs` - View Claude Code Helper logs with filtering
   - Filter by log level (ERROR, WARN, INFO, DEBUG)
   - Search for specific text
   - View logs from specific dates
   - Control number of lines returned
 
+- `backup` - Create configuration backups
+  - Compressed backups with automatic naming
+  - Optional custom backup names
+  - Safe storage in ~/.cch/backups/
+
+- `restore` - Restore from configuration backups
+  - List available backups
+  - Restore from specific backup by name
+  - Automatic backup before restore
+
+- `list-projects` - Show all projects in configuration
+  - Extract project tree from audit output
+  - Project statistics and details
+  - Configuration overview
+
 #### MCP Discovery Tools (Global Config Aware)
-- `mcp__cch__discover-mcp-tools` - Discover MCP tools used across ALL your projects
+- `discover-mcp-tools` - Discover MCP tools used across ALL your projects
   - Reads from global Claude config (~/.claude.json)
   - Find tools used in multiple projects
   - Get usage statistics and frequency
   - Project association details
   - Optional detailed statistics
 
-- `mcp__cch__list-mcps` - List all MCPs found across your entire workspace
+- `list-mcps` - List all MCPs found across your entire workspace
   - Analyzes global Claude config for all projects
   - Usage count per MCP
   - Project associations
   - Tool listings per MCP
   - Sort by usage frequency
 
-- `mcp__cch__get-mcp-stats` - Get comprehensive MCP usage statistics
+- `get-mcp-stats` - Get comprehensive MCP usage statistics
   - Aggregates data from global config
   - Total MCPs, tools, and usage counts
   - Top MCPs and tools by usage
   - Group by MCP, tool, or project
   - Cross-project analysis
+
+#### Configuration Management Tools
+- `audit` - Comprehensive configuration analysis
+  - Security analysis with dangerous permission detection
+  - Configuration bloat detection
+  - Project overview with tree structure
+  - Actionable recommendations
+
+- `clean-history` - Remove large pastes from conversation history
+  - Identify bloated project configurations
+  - Preview changes before applying
+  - Automatic backup before cleaning
+
+- `clean-dangerous` - Remove dangerous permissions
+  - Detect and remove risky permissions
+  - Safety-first approach to permission management
+
+#### Bulk Operations Tools
+- `add-permission` - Add permissions to multiple projects
+  - Pattern matching for project selection
+  - Bulk operations across project sets
+  - Dry-run preview mode
+
+- `remove-permission` - Remove permissions from multiple projects
+  - Target dangerous permissions specifically
+  - Pattern-based project selection
+  - Safety confirmations
+
+- `add-tool` - Add MCP tools to multiple projects
+  - Bulk MCP tool management
+  - Project pattern matching
+
+- `remove-tool` - Remove MCP tools from multiple projects
+  - Clean up unused MCP tools
+  - Bulk removal operations
 
 ### MCP Usage Examples
 
@@ -102,6 +136,9 @@ Ask Claude to help with your setup:
 "Find MCP tools I use frequently"
 "Give me statistics about my MCP usage"
 "Check my bash permissions for safety issues"
+"Audit my Claude Code configuration for issues"
+"Create a backup before making changes"
+"Clean up dangerous permissions across all projects"
 ```
 
 ## ✨ Key Features
@@ -139,11 +176,10 @@ Returns frequently used MCP tools across your projects:
 - **Audit Trail**: Detailed change tracking for compliance
 
 ### 📊 Project Analytics
-Real-time insights into your Claude Code usage:
-- MCP tool frequency analysis
-- Permission usage patterns
-- Project configuration health
-- Cross-project statistics
+- MCP tool frequency analysis across all projects
+- Permission usage patterns and recommendations
+- Configuration health monitoring
+- Cross-project statistics and insights
 
 ## 📦 Installation
 
@@ -157,46 +193,21 @@ npx @light-merlin-dark/claude-code-helper --help
 
 ## 🚀 CLI Quick Start
 
-### Permission Management
-
 ```bash
-# View current permissions
-cch -lp
+# Permission Management
+cch -lp                    # List permissions
+cch -add docker            # Add with smart expansion (docker:*)
+cch -dp                    # Discover frequent permissions
+cch -ap                    # Apply to all projects
 
-# Add new permission with smart expansion
-cch -add docker    # Becomes docker:* automatically
+# MCP Tool Discovery
+cch -dmc                   # Find MCP tools used in 3+ projects
+cch -rmc aia               # Reload specific MCP
+cch --doctor               # Run diagnostics
 
-# Discover frequently used permissions
-cch -dp
-
-# Apply permissions to all projects
-cch -ap
-```
-
-### MCP Tool Discovery
-
-```bash
-# Find MCP tools used in 3+ projects
-cch -dmc
-
-# Reload specific MCP
-cch -rmc aia
-
-# Reload all MCPs
-cch -rmc --force
-```
-
-### Backup & Safety
-
-```bash
-# Backup before changes
-cch -bc --name pre-update
-
-# Run diagnostics
-cch --doctor
-
-# Restore if needed
-cch -rc --name pre-update
+# Safety & Backup
+cch -bc --name pre-update  # Create backup
+cch -rc --name pre-update  # Restore backup
 ```
 
 ### Command Reference
@@ -214,44 +225,15 @@ cch -rc --name pre-update
 | `--doctor` | - | Run diagnostics |
 | `--config` | `-c` | View configuration |
 
-## 🎯 Perfect for Claude Code Users
+## 🎯 How It Works
 
-### Common Use Cases
+**Dual Interface**: MCP server for AI agents + CLI for manual control, sharing the same core functionality.
 
-```bash
-# Setting up a new project
-cch -add docker         # Add Docker permissions
-cch -add npm            # Add npm permissions
-cch -add pytest         # Add pytest permissions
-cch -ap                 # Apply to all projects at once
+**Smart Permissions**: Stored in `~/.cch/permissions.json` with automatic expansion (`docker` → `docker:*`) and safety validation.
 
-# Discovering what you already use
-cch -dp                 # Find permissions used across projects
-cch -dmc                # Find MCP tools used frequently
+**Global Analysis**: Reads `~/.claude.json` to analyze all your projects at once, not just individual directories.
 
-# Managing MCP servers
-cch -rmc aia            # Reload a specific MCP
-cch --doctor            # Diagnose configuration issues
-
-# Safety first
-cch -bc                 # Backup before major changes
-cch -rc                 # Restore if something goes wrong
-```
-
-### How It Works
-
-CCH manages your Claude Code configuration in two powerful ways:
-
-**MCP Server Mode**: When added to Claude Code, CCH provides a full MCP interface that AI agents can use to manage your configuration programmatically.
-
-**CLI Mode**: Direct command-line access for manual configuration management, with smart features like command expansion and safety validation.
-
-Both modes share the same core functionality:
-- Permissions stored in `~/.cch/permissions.json`
-- Smart command expansion (`docker` → `docker:*`)
-- Safety validation for all operations
-- Detailed change tracking and audit logs
-- Automatic formatting for Claude Code compatibility
+**Safety First**: Automatic backups, dangerous command blocking, and detailed change tracking for all operations.
 
 ## 🔧 Development
 
