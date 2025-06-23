@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.3.3] - 2025-06-23
+
+### 📸 Marketing Enhancement
+
+### Added
+- **Terminal Preview Image**: Added attractive terminal preview image to README for better marketing appeal
+- **Visual Documentation**: Centered terminal preview with caption to quickly communicate tool value
+
+### Changed
+- **README Layout**: Positioned terminal preview prominently at the top of README for immediate visual impact
+
 ## [2.3.2] - 2025-06-23
 
 ### 🎯 Enhanced Installation & Comprehensive Testing

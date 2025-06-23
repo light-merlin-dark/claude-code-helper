@@ -1,5 +1,10 @@
 # Claude Code Helper (CCH)
 
+<div align="center">
+  <img src="assets/terminal-preview.png" alt="Claude Code Helper Terminal Preview" width="700">
+  <p><em>Streamline your Claude Code workflow with intelligent MCP management</em></p>
+</div>
+
 **MCP configuration management for Claude Code - discover tools, manage permissions, and diagnose issues across all your projects.**
 
 Built as a native MCP server for Claude Code, CCH gives AI agents direct access to manage your configurations, analyze MCP tool usage, and maintain consistent bash permissions across your entire codebase.
