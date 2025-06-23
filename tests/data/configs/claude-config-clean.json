@@ -1,0 +1,31 @@
+{
+  "version": 1,
+  "projects": {
+    "clean-project": {
+      "workspacePath": "/Users/test/clean-project",
+      "bashCommands": [
+        "npm:*",
+        "git status",
+        "git diff:*",
+        "make:*"
+      ],
+      "mcpServers": {
+        "github": {
+          "type": "stdio",
+          "command": "github-mcp"
+        }
+      },
+      "history": []
+    },
+    "simple-api": {
+      "workspacePath": "/Users/test/simple-api",
+      "bashCommands": [
+        "npm:*",
+        "pytest:*",
+        "git status"
+      ],
+      "mcpServers": {},
+      "history": []
+    }
+  }
+}

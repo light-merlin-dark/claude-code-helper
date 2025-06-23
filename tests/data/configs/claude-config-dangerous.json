@@ -1,0 +1,45 @@
+{
+  "version": 1,
+  "projects": {
+    "temp-scripts": {
+      "workspacePath": "/Users/test/temp-scripts",
+      "bashCommands": [
+        "npm:*",
+        "rm:*",
+        "sudo apt-get install:*"
+      ],
+      "mcpServers": {},
+      "history": []
+    },
+    "system-admin": {
+      "workspacePath": "/Users/test/system-admin",
+      "bashCommands": [
+        "sudo:*",
+        "chmod:*",
+        "systemctl:*"
+      ],
+      "mcpServers": {},
+      "history": []
+    },
+    "dev-tools": {
+      "workspacePath": "/Users/test/dev-tools",
+      "bashCommands": [
+        "eval:*",
+        "curl * | bash",
+        "npm:*"
+      ],
+      "mcpServers": {},
+      "history": []
+    },
+    "safe-project": {
+      "workspacePath": "/Users/test/safe-project",
+      "bashCommands": [
+        "npm:*",
+        "git status",
+        "pytest:*"
+      ],
+      "mcpServers": {},
+      "history": []
+    }
+  }
+}

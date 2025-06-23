@@ -44,6 +44,48 @@ const getMcpStatsSchema = z.object({
   groupBy: z.enum(['mcp', 'tool', 'project']).optional().describe('How to group statistics'),
 });
 
+const auditSchema = z.object({
+  fix: z.boolean().optional().describe('Interactively fix issues found'),
+});
+
+const cleanHistorySchema = z.object({
+  projects: z.string().optional().describe('Comma-separated project patterns (e.g., "work/*,personal/*")'),
+  dryRun: z.boolean().optional().describe('Preview changes without applying them'),
+});
+
+const cleanDangerousSchema = z.object({
+  dryRun: z.boolean().optional().describe('Preview changes without applying them'),
+});
+
+const bulkAddPermSchema = z.object({
+  permission: z.string().describe('Permission to add'),
+  projects: z.string().optional().describe('Comma-separated project patterns'),
+  all: z.boolean().optional().describe('Apply to all projects'),
+  dryRun: z.boolean().optional().describe('Preview changes without applying them'),
+});
+
+const bulkRemovePermSchema = z.object({
+  permission: z.string().optional().describe('Specific permission to remove'),
+  dangerous: z.boolean().optional().describe('Remove all dangerous permissions'),
+  projects: z.string().optional().describe('Comma-separated project patterns'),
+  all: z.boolean().optional().describe('Apply to all projects'),
+  dryRun: z.boolean().optional().describe('Preview changes without applying them'),
+});
+
+const bulkAddToolSchema = z.object({
+  tool: z.string().describe('MCP tool name to add'),
+  projects: z.string().optional().describe('Comma-separated project patterns'),
+  all: z.boolean().optional().describe('Apply to all projects'),
+  dryRun: z.boolean().optional().describe('Preview changes without applying them'),
+});
+
+const bulkRemoveToolSchema = z.object({
+  tool: z.string().describe('MCP tool name to remove'),
+  projects: z.string().optional().describe('Comma-separated project patterns'),
+  all: z.boolean().optional().describe('Apply to all projects'),
+  dryRun: z.boolean().optional().describe('Preview changes without applying them'),
+});
+
 // Tool definitions with proper JSON Schema
 const TOOLS = [
   {
@@ -141,6 +183,156 @@ const TOOLS = [
           description: 'How to group statistics'
         }
       }
+    },
+  },
+  {
+    name: 'mcp__cch__audit',
+    description: 'Comprehensive configuration analysis for security issues, bloat, and optimization',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        fix: {
+          type: 'boolean',
+          description: 'Interactively fix issues found'
+        }
+      }
+    },
+  },
+  {
+    name: 'mcp__cch__clean-history',
+    description: 'Remove large pastes from conversation history to reduce config bloat',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projects: {
+          type: 'string',
+          description: 'Comma-separated project patterns (e.g., "work/*,personal/*")'
+        },
+        dryRun: {
+          type: 'boolean',
+          description: 'Preview changes without applying them'
+        }
+      }
+    },
+  },
+  {
+    name: 'mcp__cch__clean-dangerous',
+    description: 'Remove dangerous permissions from all projects',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        dryRun: {
+          type: 'boolean',
+          description: 'Preview changes without applying them'
+        }
+      }
+    },
+  },
+  {
+    name: 'mcp__cch__add-permission',
+    description: 'Add permission to multiple projects using patterns or --all',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        permission: {
+          type: 'string',
+          description: 'Permission to add'
+        },
+        projects: {
+          type: 'string',
+          description: 'Comma-separated project patterns'
+        },
+        all: {
+          type: 'boolean',
+          description: 'Apply to all projects'
+        },
+        dryRun: {
+          type: 'boolean',
+          description: 'Preview changes without applying them'
+        }
+      },
+      required: ['permission']
+    },
+  },
+  {
+    name: 'mcp__cch__remove-permission',
+    description: 'Remove permission from multiple projects',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        permission: {
+          type: 'string',
+          description: 'Specific permission to remove'
+        },
+        dangerous: {
+          type: 'boolean',
+          description: 'Remove all dangerous permissions'
+        },
+        projects: {
+          type: 'string',
+          description: 'Comma-separated project patterns'
+        },
+        all: {
+          type: 'boolean',
+          description: 'Apply to all projects'
+        },
+        dryRun: {
+          type: 'boolean',
+          description: 'Preview changes without applying them'
+        }
+      }
+    },
+  },
+  {
+    name: 'mcp__cch__add-tool',
+    description: 'Add MCP tool to multiple projects',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        tool: {
+          type: 'string',
+          description: 'MCP tool name to add'
+        },
+        projects: {
+          type: 'string',
+          description: 'Comma-separated project patterns'
+        },
+        all: {
+          type: 'boolean',
+          description: 'Apply to all projects'
+        },
+        dryRun: {
+          type: 'boolean',
+          description: 'Preview changes without applying them'
+        }
+      },
+      required: ['tool']
+    },
+  },
+  {
+    name: 'mcp__cch__remove-tool',
+    description: 'Remove MCP tool from multiple projects',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        tool: {
+          type: 'string',
+          description: 'MCP tool name to remove'
+        },
+        projects: {
+          type: 'string',
+          description: 'Comma-separated project patterns'
+        },
+        all: {
+          type: 'boolean',
+          description: 'Apply to all projects'
+        },
+        dryRun: {
+          type: 'boolean',
+          description: 'Preview changes without applying them'
+        }
+      },
+      required: ['tool']
     },
   },
 ];
@@ -380,6 +572,161 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             type: 'text',
             text: output
           }]
+        };
+      }
+      
+      case 'mcp__cch__audit': {
+        const params = auditSchema.parse(args);
+        
+        let cliCommand = 'npx claude-code-helper --audit';
+        if (params.fix) {
+          cliCommand += ' --fix';
+        }
+        
+        const output = executeCliCommand(cliCommand);
+        
+        return {
+          content: [{
+            type: 'text',
+            text: parseCliOutput(output),
+          }],
+        };
+      }
+      
+      case 'mcp__cch__clean-history': {
+        const params = cleanHistorySchema.parse(args);
+        
+        let cliCommand = 'npx claude-code-helper --clean-history';
+        if (params.projects) {
+          cliCommand += ` --projects "${params.projects}"`;
+        }
+        if (params.dryRun) {
+          cliCommand += ' --dry-run';
+        }
+        
+        const output = executeCliCommand(cliCommand);
+        
+        return {
+          content: [{
+            type: 'text',
+            text: parseCliOutput(output),
+          }],
+        };
+      }
+      
+      case 'mcp__cch__clean-dangerous': {
+        const params = cleanDangerousSchema.parse(args);
+        
+        let cliCommand = 'npx claude-code-helper --clean-dangerous';
+        if (params.dryRun) {
+          cliCommand += ' --dry-run';
+        }
+        
+        const output = executeCliCommand(cliCommand);
+        
+        return {
+          content: [{
+            type: 'text',
+            text: parseCliOutput(output),
+          }],
+        };
+      }
+      
+      case 'mcp__cch__add-permission': {
+        const params = bulkAddPermSchema.parse(args);
+        
+        let cliCommand = `npx claude-code-helper --add-perm "${params.permission}"`;
+        if (params.projects) {
+          cliCommand += ` --projects "${params.projects}"`;
+        } else if (params.all) {
+          cliCommand += ' --all';
+        }
+        if (params.dryRun) {
+          cliCommand += ' --dry-run';
+        }
+        
+        const output = executeCliCommand(cliCommand);
+        
+        return {
+          content: [{
+            type: 'text',
+            text: parseCliOutput(output),
+          }],
+        };
+      }
+      
+      case 'mcp__cch__remove-permission': {
+        const params = bulkRemovePermSchema.parse(args);
+        
+        let cliCommand = 'npx claude-code-helper --remove-perm';
+        if (params.permission) {
+          cliCommand += ` "${params.permission}"`;
+        }
+        if (params.dangerous) {
+          cliCommand += ' --dangerous';
+        }
+        if (params.projects) {
+          cliCommand += ` --projects "${params.projects}"`;
+        } else if (params.all) {
+          cliCommand += ' --all';
+        }
+        if (params.dryRun) {
+          cliCommand += ' --dry-run';
+        }
+        
+        const output = executeCliCommand(cliCommand);
+        
+        return {
+          content: [{
+            type: 'text',
+            text: parseCliOutput(output),
+          }],
+        };
+      }
+      
+      case 'mcp__cch__add-tool': {
+        const params = bulkAddToolSchema.parse(args);
+        
+        let cliCommand = `npx claude-code-helper --add-tool "${params.tool}"`;
+        if (params.projects) {
+          cliCommand += ` --projects "${params.projects}"`;
+        } else if (params.all) {
+          cliCommand += ' --all';
+        }
+        if (params.dryRun) {
+          cliCommand += ' --dry-run';
+        }
+        
+        const output = executeCliCommand(cliCommand);
+        
+        return {
+          content: [{
+            type: 'text',
+            text: parseCliOutput(output),
+          }],
+        };
+      }
+      
+      case 'mcp__cch__remove-tool': {
+        const params = bulkRemoveToolSchema.parse(args);
+        
+        let cliCommand = `npx claude-code-helper --remove-tool "${params.tool}"`;
+        if (params.projects) {
+          cliCommand += ` --projects "${params.projects}"`;
+        } else if (params.all) {
+          cliCommand += ' --all';
+        }
+        if (params.dryRun) {
+          cliCommand += ' --dry-run';
+        }
+        
+        const output = executeCliCommand(cliCommand);
+        
+        return {
+          content: [{
+            type: 'text',
+            text: parseCliOutput(output),
+          }],
         };
       }
       

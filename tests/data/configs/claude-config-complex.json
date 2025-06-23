@@ -1,0 +1,51 @@
+{
+  "version": 1,
+  "projects": {
+    "nested/deep/project": {
+      "workspacePath": "/Users/test/nested/deep/project",
+      "bashCommands": [
+        "npm:*"
+      ],
+      "mcpServers": {},
+      "history": []
+    },
+    "project-with-special-chars!@#": {
+      "workspacePath": "/Users/test/project-with-special-chars!@#",
+      "bashCommands": [
+        "npm:*"
+      ],
+      "mcpServers": {},
+      "history": []
+    },
+    "empty-project": {
+      "workspacePath": "/Users/test/empty-project",
+      "bashCommands": [],
+      "mcpServers": {},
+      "history": []
+    },
+    "project-with-long-name-that-exceeds-normal-expectations": {
+      "workspacePath": "/Users/test/project-with-long-name-that-exceeds-normal-expectations",
+      "bashCommands": [
+        "npm:*"
+      ],
+      "mcpServers": {
+        "very-long-mcp-server-name-for-testing": {
+          "type": "stdio",
+          "command": "very-long-mcp-server-name-for-testing"
+        }
+      },
+      "history": [
+        {
+          "role": "user",
+          "content": "Complex nested conversation",
+          "pastedContents": {
+            "complex-paste": {
+              "filename": "complex-file.json",
+              "content": "{\n  \"deeply\": {\n    \"nested\": {\n      \"object\": {\n        \"with\": {\n          \"many\": {\n            \"levels\": {\n              \"and\": {\n                \"arrays\": [\n                  1,\n                  2,\n                  3,\n                  {\n                    \"more\": \"nesting\"\n                  }\n                ]\n              }\n            }\n          }\n        }\n      }\n    }\n  }\n}{\n  \"deeply\": {\n    \"nested\": {\n      \"object\": {\n        \"with\": {\n          \"many\": {\n            \"levels\": {\n              \"and\": {\n                \"arrays\": [\n                  1,\n                  2,\n                  3,\n                  {\n                    \"more\": \"nesting\"\n                  }\n                ]\n              }\n            }\n          }\n        }\n      }\n    }\n  }\n}{\n  \"deeply\": {\n    \"nested\": {\n      \"object\": {\n        \"with\": {\n          \"many\": {\n            \"levels\": {\n              \"and\": {\n                \"arrays\": [\n                  1,\n                  2,\n                  3,\n                  {\n                    \"more\": \"nesting\"\n                  }\n                ]\n              }\n            }\n          }\n        }\n      }\n    }\n  }\n}{\n  \"deeply\": {\n    \"nested\": {\n      \"object\": {\n        \"with\": {\n          \"many\": {\n            \"levels\": {\n              \"and\": {\n                \"arrays\": [\n                  1,\n                  2,\n                  3,\n                  {\n                    \"more\": \"nesting\"\n                  }\n                ]\n              }\n            }\n          }\n        }\n      }\n    }\n  }\n}{\n  \"deeply\": {\n    \"nested\": {\n      \"object\": {\n        \"with\": {\n          \"many\": {\n            \"levels\": {\n              \"and\": {\n                \"arrays\": [\n                  1,\n                  2,\n                  3,\n                  {\n                    \"more\": \"nesting\"\n                  }\n                ]\n              }\n            }\n          }\n        }\n      }\n    }\n  }\n}{\n  \"deeply\": {\n    \"nested\": {\n      \"object\": {\n        \"with\": {\n          \"many\": {\n            \"levels\": {\n              \"and\": {\n                \"arrays\": [\n                  1,\n                  2,\n                  3,\n                  {\n                    \"more\": \"nesting\"\n                  }\n                ]\n              }\n            }\n          }\n        }\n      }\n    }\n  }\n}{\n  \"deeply\": {\n    \"nested\": {\n      \"object\": {\n        \"with\": {\n          \"many\": {\n            \"levels\": {\n              \"and\": {\n                \"arrays\": [\n                  1,\n                  2,\n                  3,\n                  {\n                    \"more\": \"nesting\"\n                  }\n                ]\n              }\n            }\n          }\n        }\n      }\n    }\n  }\n}{\n  \"deeply\": {\n    \"nested\": {\n      \"object\": {\n        \"with\": {\n          \"many\": {\n            \"levels\": {\n              \"and\": {\n                \"arrays\": [\n                  1,\n                  2,\n                  3,\n                  {\n                    \"more\": \"nesting\"\n                  }\n                ]\n              }\n            }\n          }\n        }\n      }\n    }\n  }\n}{\n  \"deeply\": {\n    \"nested\": {\n      \"object\": {\n        \"with\": {\n          \"many\": {\n            \"levels\": {\n              \"and\": {\n                \"arrays\": [\n                  1,\n                  2,\n                  3,\n                  {\n                    \"more\": \"nesting\"\n                  }\n                ]\n              }\n            }\n          }\n        }\n      }\n    }\n  }\n}{\n  \"deeply\": {\n    \"nested\": {\n      \"object\": {\n        \"with\": {\n          \"many\": {\n            \"levels\": {\n              \"and\": {\n                \"arrays\": [\n                  1,\n                  2,\n                  3,\n                  {\n                    \"more\": \"nesting\"\n                  }\n                ]\n              }\n            }\n          }\n        }\n      }\n    }\n  }\n}{\n  \"deeply\": {\n    \"nested\": {\n      \"object\": {\n        \"with\": {\n          \"many\": {\n            \"levels\": {\n              \"and\": {\n                \"arrays\": [\n                  1,\n                  2,\n                  3,\n                  {\n                    \"more\": \"nesting\"\n                  }\n                ]\n              }\n            }\n          }\n        }\n      }\n    }\n  }\n}{\n  \"deeply\": {\n    \"nested\": {\n      \"object\": {\n        \"with\": {\n          \"many\": {\n            \"levels\": {\n              \"and\": {\n                \"arrays\": [\n                  1,\n                  2,\n                  3,\n                  {\n                    \"more\": \"nesting\"\n                  }\n                ]\n              }\n            }\n          }\n        }\n      }\n    }\n  }\n}{\n  \"deeply\": {\n    \"nested\": {\n      \"object\": {\n        \"with\": {\n          \"many\": {\n            \"levels\": {\n              \"and\": {\n                \"arrays\": [\n                  1,\n                  2,\n                  3,\n                  {\n                    \"more\": \"nesting\"\n                  }\n                ]\n              }\n            }\n          }\n        }\n      }\n    }\n  }\n}{\n  \"deeply\": {\n    \"nested\": {\n      \"object\": {\n        \"with\": {\n          \"many\": {\n            \"levels\": {\n              \"and\": {\n                \"arrays\": [\n                  1,\n                  2,\n                  3,\n                  {\n                    \"more\": \"nesting\"\n                  }\n                ]\n              }\n            }\n          }\n        }\n      }\n    }\n  }\n}{\n  \"deeply\": {\n    \"nested\": {\n      \"object\": {\n        \"with\": {\n          \"many\": {\n            \"levels\": {\n              \"and\": {\n                \"arrays\": [\n                  1,\n                  2,\n                  3,\n                  {\n                    \"more\": \"nesting\"\n                  }\n                ]\n              }\n            }\n          }\n        }\n      }\n    }\n  }\n}{\n  \"deeply\": {\n    \"nested\": {\n      \"object\": {\n        \"with\": {\n          \"many\": {\n            \"levels\": {\n              \"and\": {\n                \"arrays\": [\n                  1,\n                  2,\n                  3,\n                  {\n                    \"more\": \"nesting\"\n                  }\n                ]\n              }\n            }\n          }\n        }\n      }\n    }\n  }\n}{\n  \"deeply\": {\n    \"nested\": {\n      \"object\": {\n        \"with\": {\n          \"many\": {\n            \"levels\": {\n              \"and\": {\n                \"arrays\": [\n                  1,\n                  2,\n                  3,\n                  {\n                    \"more\": \"nesting\"\n                  }\n                ]\n              }\n            }\n          }\n        }\n      }\n    }\n  }\n}{\n  \"deeply\": {\n    \"nested\": {\n      \"object\": {\n        \"with\": {\n          \"many\": {\n            \"levels\": {\n              \"and\": {\n                \"arrays\": [\n                  1,\n                  2,\n                  3,\n                  {\n                    \"more\": \"nesting\"\n                  }\n                ]\n              }\n            }\n          }\n        }\n      }\n    }\n  }\n}{\n  \"deeply\": {\n    \"nested\": {\n      \"object\": {\n        \"with\": {\n          \"many\": {\n            \"levels\": {\n              \"and\": {\n                \"arrays\": [\n                  1,\n                  2,\n                  3,\n                  {\n                    \"more\": \"nesting\"\n                  }\n                ]\n              }\n            }\n          }\n        }\n      }\n    }\n  }\n}{\n  \"deeply\": {\n    \"nested\": {\n      \"object\": {\n        \"with\": {\n          \"many\": {\n            \"levels\": {\n              \"and\": {\n                \"arrays\": [\n                  1,\n                  2,\n                  3,\n                  {\n                    \"more\": \"nesting\"\n                  }\n                ]\n              }\n            }\n          }\n        }\n      }\n    }\n  }\n}"
+            }
+          }
+        }
+      ]
+    }
+  }
+}

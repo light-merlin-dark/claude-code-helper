@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { parseArgs } from './common';
 import { logger } from './utils/logger';
+import { handleCLIError, ValidationError } from './utils/errors';
 
 // Permission management
 import * as manage from './commands/permissions/manage';
@@ -23,6 +24,13 @@ import * as cleanup from './commands/config/cleanup';
 
 // Doctor command
 import { runDoctor } from './commands/doctor';
+
+// Audit and clean commands
+import { audit } from './commands/audit';
+import { cleanHistory, cleanDangerous } from './commands/clean';
+
+// Bulk operation commands
+import { bulkAddPermission, bulkRemovePermission, bulkAddTool, bulkRemoveTool } from './commands/bulk';
 
 // Core utilities
 import { ensureBaseCommandsExist } from './core/config';
@@ -63,8 +71,8 @@ Usage: cch [options]
   }
   
   helpText += `Setup & Installation:
-  --install                  Install CCH as MCP server in Claude Code
-  --uninstall                Remove CCH MCP server from Claude Code
+  install                    Install CCH as MCP server in Claude Code
+  uninstall                  Remove CCH MCP server from Claude Code
 
 Quick Start:
   cch -lp                    # See your permissions
@@ -78,6 +86,15 @@ Managing Permissions:
   -rm, --remove-permission   Remove a permission by number
   -ap, --apply-permissions   Apply permissions to all projects
 
+Bulk Operations:
+  --add-perm <perm>          Add permission to multiple projects
+  --remove-perm <perm>       Remove permission from projects
+  --add-tool <tool>          Add MCP tool to multiple projects
+  --remove-tool <tool>       Remove MCP tool from projects
+  
+  Use with: --projects <pattern> or --all
+  Examples: --projects "work/*,personal/*" or --all
+
 MCP Tools:
   -dmc, --discover-mcp       Discover frequently used MCP tools
   -rmc, --reload-mcp         Reload MCP configuration from claude CLI
@@ -86,6 +103,8 @@ Configuration:
   -c, --config               View current configuration and file paths
   --changelog                View recent changes
   --doctor                   Diagnose and fix configuration issues
+  --audit                    Comprehensive config analysis (security, bloat, etc.)
+  --audit --fix              Interactively fix issues found by audit
 
 Backup & Restore:
   -bc, --backup-config       Create a backup of Claude config
@@ -94,6 +113,8 @@ Backup & Restore:
 
 Cleanup:
   -dd, --delete-data         Delete all CCH data (with confirmation)
+  --clean-history            Remove large pastes from conversation history
+  --clean-dangerous          Remove all dangerous permissions
 
 Options:
   --test                     Preview changes without applying
@@ -111,6 +132,11 @@ Examples:
   cch -ap --test             # Preview what will change
   cch -ap                    # Apply changes
   cch -bc -n before-update   # Create a named backup
+  
+Bulk Examples:
+  cch --add-perm "npm:*" --projects "work/*"       # Add to work projects
+  cch --remove-perm --dangerous --all              # Remove dangerous perms
+  cch --add-tool github --projects "*-api"         # Add to API projects
 
 View recent changes:
   cch --changelog`;
@@ -119,7 +145,7 @@ View recent changes:
 }
 
 export async function handleCLI(args: string[]): Promise<void> {
-  const { options } = parseArgs(args);
+  const { command, options } = parseArgs(args);
   
   const {
     // Permission commands
@@ -157,6 +183,20 @@ export async function handleCLI(args: string[]): Promise<void> {
     'version': version_,
     v: v,
     
+    // Audit and clean commands
+    'audit': audit_,
+    'clean-history': cleanHistory_,
+    'clean-dangerous': cleanDangerous_,
+    
+    // Bulk operation commands
+    'add-perm': addPerm_,
+    'remove-perm': removePerm_,
+    'add-tool': addTool_,
+    'remove-tool': removeTool_,
+    'projects': projects_,
+    'all': all_,
+    'dangerous': dangerous_,
+    
     // MCP installation
     'install': install_,
     'uninstall': uninstall_,
@@ -182,7 +222,9 @@ export async function handleCLI(args: string[]): Promise<void> {
                        !listPermissions_ && !lp && !discoverPermissions_ && !discover_ && !dp &&
                        !addPermission_ && !add_ && !add && !removePermission_ && !remove_ && !rm &&
                        !applyPermissions_ && !ap && !discoverMcp_ && !dmc && !reloadMcp_ && !rmc &&
-                       !install_ && !uninstall_;
+                       !install_ && !uninstall_ && !audit_ && !cleanHistory_ && !cleanDangerous_ &&
+                       !addPerm_ && !removePerm_ && !addTool_ && !removeTool_ && 
+                       command !== 'install' && command !== 'uninstall';
     
     // Only ensure base commands exist if we're not just showing help or deleting data
     const isDeletingData = deleteData_ || dd;
@@ -202,8 +244,22 @@ export async function handleCLI(args: string[]): Promise<void> {
     const isDeleteData = deleteData_ || dd;
     const backupNameValue = backupName || name;
     const isForce = force || f;
-    const isInstall = install_;
-    const isUninstall = uninstall_;
+    const isInstall = install_ || command === 'install';
+    const isUninstall = uninstall_ || command === 'uninstall';
+    
+    // Audit and clean commands
+    const isAudit = audit_;
+    const isCleanHistory = cleanHistory_;
+    const isCleanDangerous = cleanDangerous_;
+    
+    // Bulk operation commands
+    const isAddPerm = addPerm_;
+    const isRemovePerm = removePerm_;
+    const isAddTool = addTool_;
+    const isRemoveTool = removeTool_;
+    const projectsPattern = projects_;
+    const isAll = all_;
+    const isDangerous = dangerous_;
     
     // Permission commands
     const isListPermissions = listPermissions_ || lp;
@@ -229,7 +285,11 @@ export async function handleCLI(args: string[]): Promise<void> {
                          typeof add_ === 'string' ? add_ : 
                          typeof add === 'string' ? add : '';
       if (!permission) {
-        throw new Error('Please provide a permission to add');
+        throw new ValidationError(
+          'Permission required',
+          'No permission was provided to add.',
+          'Usage: cch -add "npm:*" or cch --add-permission "docker:*"'
+        );
       }
       await addPermission(permission, testMode);
     } else if (isRemovePermission) {
@@ -238,7 +298,11 @@ export async function handleCLI(args: string[]): Promise<void> {
                        typeof rm === 'string' ? rm : '';
       const index = parseInt(indexStr, 10);
       if (isNaN(index)) {
-        throw new Error('Please provide a valid permission number');
+        throw new ValidationError(
+          'Invalid permission number',
+          `"${indexStr}" is not a valid number.`,
+          'Usage: cch -rm 1 (where 1 is the permission number from cch -lp)'
+        );
       }
       await manage.removeCommand(index, isForce, testMode);
     } else if (isApplyPermissions) {
@@ -284,6 +348,115 @@ export async function handleCLI(args: string[]): Promise<void> {
       await changelog.showChangelog();
     } else if (isDoctor) {
       await runDoctor(undefined, testMode);
+    } else if (isAudit) {
+      const fixMode = options.fix || false;
+      const result = await audit({ fix: fixMode, testMode });
+      console.log(result);
+    } else if (isCleanHistory) {
+      const projects = options.projects as string | undefined;
+      const dryRun = options['dry-run'] || false;
+      const result = await cleanHistory({
+        projects: projects ? projects.split(',').map(p => p.trim()) : undefined,
+        testMode,
+        dryRun
+      });
+      
+      if (!dryRun) {
+        console.log(`✓ Cleaned ${result.pastesRemoved} pastes from ${result.projectsModified} projects`);
+        console.log(`  Saved ${(result.sizeReduction / 1024 / 1024).toFixed(1)} MB`);
+        if (result.backupPath) {
+          console.log(`  Backup: ${result.backupPath}`);
+        }
+      } else {
+        console.log(`[DRY RUN] Would clean ${result.pastesRemoved} pastes from ${result.projectsModified} projects`);
+        console.log(`  Would save ${(result.sizeReduction / 1024 / 1024).toFixed(1)} MB`);
+      }
+    } else if (isCleanDangerous) {
+      const dryRun = options['dry-run'] || false;
+      const result = await cleanDangerous({ testMode, dryRun });
+      
+      if (!dryRun) {
+        console.log(`✓ Removed ${result.permissionsRemoved} dangerous permissions from ${result.projectsModified} projects`);
+        if (result.backupPath) {
+          console.log(`  Backup: ${result.backupPath}`);
+        }
+      } else {
+        console.log(`[DRY RUN] Would remove ${result.permissionsRemoved} dangerous permissions from ${result.projectsModified} projects`);
+      }
+    } else if (isAddPerm) {
+      const permission = typeof isAddPerm === 'string' ? isAddPerm : '';
+      if (!permission) {
+        throw new ValidationError(
+          'Permission required',
+          'No permission was provided for bulk add.',
+          'Usage: cch --add-perm "npm:*" --projects "work/*" or --all'
+        );
+      }
+      
+      const result = await bulkAddPermission({
+        permission,
+        projects: projectsPattern as string | string[] | undefined,
+        all: isAll as boolean | undefined,
+        testMode,
+        dryRun: options['dry-run'] || false
+      });
+      
+      console.log(`✓ Added "${permission}" to ${result.projectsModified} projects`);
+      if (result.backupPath) {
+        console.log(`  Backup: ${result.backupPath}`);
+      }
+    } else if (isRemovePerm) {
+      const permission = typeof isRemovePerm === 'string' ? isRemovePerm : undefined;
+      
+      const result = await bulkRemovePermission({
+        permission,
+        dangerous: isDangerous as boolean | undefined,
+        projects: projectsPattern as string | string[] | undefined,
+        all: isAll as boolean | undefined,
+        testMode,
+        dryRun: options['dry-run'] || false
+      });
+      
+      console.log(`✓ Removed ${result.itemsRemoved} permissions from ${result.projectsModified} projects`);
+      if (result.backupPath) {
+        console.log(`  Backup: ${result.backupPath}`);
+      }
+    } else if (isAddTool) {
+      const tool = typeof isAddTool === 'string' ? isAddTool : '';
+      if (!tool) {
+        throw new Error('Please provide a tool name to add');
+      }
+      
+      const result = await bulkAddTool({
+        tool,
+        projects: projectsPattern as string | string[] | undefined,
+        all: isAll as boolean | undefined,
+        testMode,
+        dryRun: options['dry-run'] || false
+      });
+      
+      console.log(`✓ Added MCP tool "${tool}" to ${result.projectsModified} projects`);
+      if (result.backupPath) {
+        console.log(`  Backup: ${result.backupPath}`);
+      }
+    } else if (isRemoveTool) {
+      const tool = typeof isRemoveTool === 'string' ? isRemoveTool : '';
+      if (!tool) {
+        throw new Error('Please provide a tool name to remove');
+      }
+      
+      const result = await bulkRemoveTool({
+        tool,
+        projects: projectsPattern as string | string[] | undefined,
+        all: isAll as boolean | undefined,
+        testMode,
+        dryRun: options['dry-run'] || false
+      });
+      
+      console.log(`✓ Removed MCP tool "${tool}" from ${result.projectsModified} projects`);
+      if (result.backupPath) {
+        console.log(`  Backup: ${result.backupPath}`);
+      }
     } else if (isDeleteData) {
       await cleanup.deleteData(testMode);
     } else if (isInstall) {
@@ -301,10 +474,10 @@ export async function handleCLI(args: string[]): Promise<void> {
     }
   } catch (err) {
     if (err instanceof Error) {
-      logger.error(err.message);
+      handleCLIError(err);
+    } else {
+      logger.error('Unknown error occurred');
       process.exit(1);
     }
-    logger.error('Unknown error occurred');
-    process.exit(1);
   }
 }

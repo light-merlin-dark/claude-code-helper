@@ -12,7 +12,12 @@ export interface ClaudeConfig {
   hasCompletedOnboarding?: boolean;
   projects?: {
     [path: string]: {
-      allowedTools: string[];
+      allowedTools?: string[];
+      allowedCommands?: string[];
+      history?: any[];
+      mcpServers?: {
+        [name: string]: any;
+      };
       [key: string]: any;
     };
   };

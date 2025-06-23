@@ -38,7 +38,7 @@ Understand your Claude Code usage patterns:
 npm install -g @light-merlin-dark/claude-code-helper
 
 # Install MCP server in Claude Code
-cch --install
+cch install
 ```
 
 That's it! Restart Claude Code and you're ready to go.

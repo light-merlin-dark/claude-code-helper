@@ -16,3 +16,14 @@ export async function promptUser(question: string): Promise<string> {
     });
   });
 }
+
+export async function promptConfirm(question: string, defaultValue: boolean = false): Promise<boolean> {
+  const defaultText = defaultValue ? '[Y/n]' : '[y/N]';
+  const answer = await promptUser(`${question} ${defaultText}: `);
+  
+  if (answer === '') {
+    return defaultValue;
+  }
+  
+  return answer === 'y' || answer === 'yes';
+}

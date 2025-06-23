@@ -1,0 +1,120 @@
+{
+  "version": 1,
+  "projects": {
+    "work/api-server": {
+      "workspacePath": "/Users/test/work/api-server",
+      "bashCommands": [
+        "npm:*",
+        "docker:*"
+      ],
+      "mcpServers": {
+        "github": {
+          "type": "stdio",
+          "command": "github-mcp"
+        }
+      },
+      "history": []
+    },
+    "work/frontend": {
+      "workspacePath": "/Users/test/work/frontend",
+      "bashCommands": [
+        "npm:*",
+        "yarn:*"
+      ],
+      "mcpServers": {
+        "github": {
+          "type": "stdio",
+          "command": "github-mcp"
+        }
+      },
+      "history": []
+    },
+    "work/mobile-app": {
+      "workspacePath": "/Users/test/work/mobile-app",
+      "bashCommands": [
+        "react-native:*",
+        "pod:*"
+      ],
+      "mcpServers": {},
+      "history": []
+    },
+    "personal/blog": {
+      "workspacePath": "/Users/test/personal/blog",
+      "bashCommands": [
+        "npm:*",
+        "hugo:*"
+      ],
+      "mcpServers": {},
+      "history": []
+    },
+    "personal/scripts": {
+      "workspacePath": "/Users/test/personal/scripts",
+      "bashCommands": [
+        "python:*",
+        "bash:*"
+      ],
+      "mcpServers": {},
+      "history": []
+    },
+    "users-api": {
+      "workspacePath": "/Users/test/users-api",
+      "bashCommands": [
+        "npm:*",
+        "docker:*"
+      ],
+      "mcpServers": {
+        "aia": {
+          "type": "stdio",
+          "command": "aia-mcp"
+        }
+      },
+      "history": []
+    },
+    "orders-api": {
+      "workspacePath": "/Users/test/orders-api",
+      "bashCommands": [
+        "npm:*",
+        "docker:*"
+      ],
+      "mcpServers": {
+        "aia": {
+          "type": "stdio",
+          "command": "aia-mcp"
+        }
+      },
+      "history": []
+    },
+    "payments-api": {
+      "workspacePath": "/Users/test/payments-api",
+      "bashCommands": [
+        "npm:*",
+        "docker:*"
+      ],
+      "mcpServers": {
+        "aia": {
+          "type": "stdio",
+          "command": "aia-mcp"
+        }
+      },
+      "history": []
+    },
+    "build-tools": {
+      "workspacePath": "/Users/test/build-tools",
+      "bashCommands": [
+        "make:*",
+        "cmake:*"
+      ],
+      "mcpServers": {},
+      "history": []
+    },
+    "dev-tools": {
+      "workspacePath": "/Users/test/dev-tools",
+      "bashCommands": [
+        "node:*",
+        "bun:*"
+      ],
+      "mcpServers": {},
+      "history": []
+    }
+  }
+}

@@ -2,6 +2,35 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.3.2] - 2025-06-23
+
+### 🎯 Enhanced Installation & Comprehensive Testing
+
+### Added
+- **Simplified Install Command**: `cch install` now works without flags - just run `cch install`
+- **Enhanced Install Output**: Beautiful, informative output that clearly explains CCH's powerful capabilities
+- **Comprehensive Testing Infrastructure**: Complete test data generation and management system
+  - Test configuration files for all scenarios (clean, bloated, dangerous, multi-project, complex)
+  - Test data utilities for reliable test setup and cleanup
+  - Performance benchmarks and regression detection
+  - Snapshot testing for complex audit outputs
+  - Integration tests for all major features
+
+### Changed
+- **Install Command**: Both `cch install` and `cch --install` now work (backwards compatible)
+- **Install Experience**: Much more informative output showcasing AI-accessible tools and capabilities
+- **README**: Updated to show simplified `cch install` command
+
+### Improved
+- **Test Coverage**: Added comprehensive integration tests for audit, bulk operations, and MCP tools
+- **Test Data Management**: Robust test data generation with realistic scenarios
+- **Performance Testing**: Baseline performance metrics to catch regressions
+- **Developer Experience**: Better test organization and reliable test infrastructure
+
+### Fixed
+- **Help Text**: Updated to show simplified install command format
+- **Test Reliability**: Better test isolation and cleanup procedures
+
 ## [2.3.1] - 2025-06-23
 
 ### 🔧 Critical Fixes & Test Improvements
