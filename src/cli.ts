@@ -197,9 +197,6 @@ export async function handleCLI(args: string[]): Promise<void> {
     'all': all_,
     'dangerous': dangerous_,
     
-    // MCP installation
-    'install': install_,
-    'uninstall': uninstall_,
     
     // Options
     n: backupName,
@@ -222,7 +219,7 @@ export async function handleCLI(args: string[]): Promise<void> {
                        !listPermissions_ && !lp && !discoverPermissions_ && !discover_ && !dp &&
                        !addPermission_ && !add_ && !add && !removePermission_ && !remove_ && !rm &&
                        !applyPermissions_ && !ap && !discoverMcp_ && !dmc && !reloadMcp_ && !rmc &&
-                       !install_ && !uninstall_ && !audit_ && !cleanHistory_ && !cleanDangerous_ &&
+                       !audit_ && !cleanHistory_ && !cleanDangerous_ &&
                        !addPerm_ && !removePerm_ && !addTool_ && !removeTool_ && 
                        command !== 'install' && command !== 'uninstall';
     
@@ -244,8 +241,8 @@ export async function handleCLI(args: string[]): Promise<void> {
     const isDeleteData = deleteData_ || dd;
     const backupNameValue = backupName || name;
     const isForce = force || f;
-    const isInstall = install_ || command === 'install';
-    const isUninstall = uninstall_ || command === 'uninstall';
+    const isInstall = command === 'install';
+    const isUninstall = command === 'uninstall';
     
     // Audit and clean commands
     const isAudit = audit_;
