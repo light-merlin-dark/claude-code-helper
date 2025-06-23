@@ -45,7 +45,8 @@ const getMcpStatsSchema = z.object({
 });
 
 const auditSchema = z.object({
-  fix: z.boolean().optional().describe('Interactively fix issues found'),
+  // Note: fix parameter disabled for MCP to avoid interactive prompts
+  // fix: z.boolean().optional().describe('Interactively fix issues found'),
 });
 
 const cleanHistorySchema = z.object({
@@ -86,10 +87,22 @@ const bulkRemoveToolSchema = z.object({
   dryRun: z.boolean().optional().describe('Preview changes without applying them'),
 });
 
+const backupSchema = z.object({
+  name: z.string().optional().describe('Name for the backup (defaults to timestamp)'),
+});
+
+const restoreSchema = z.object({
+  name: z.string().optional().describe('Name of backup to restore (defaults to most recent)'),
+});
+
+const listProjectsSchema = z.object({
+  includeStats: z.boolean().optional().describe('Include project statistics'),
+});
+
 // Tool definitions with proper JSON Schema
 const TOOLS = [
   {
-    name: 'mcp__cch__reload-mcp',
+    name: 'reload-mcp',
     description: 'Reload MCP configuration from Claude CLI',
     inputSchema: {
       type: 'object',
@@ -106,7 +119,7 @@ const TOOLS = [
     },
   },
   {
-    name: 'mcp__cch__doctor',
+    name: 'doctor',
     description: 'Run comprehensive diagnostics and health checks for Claude Code Helper',
     inputSchema: {
       type: 'object',
@@ -114,7 +127,7 @@ const TOOLS = [
     },
   },
   {
-    name: 'mcp__cch__view-logs',
+    name: 'view-logs',
     description: 'View Claude Code Helper logs with filtering options',
     inputSchema: {
       type: 'object',
@@ -141,7 +154,7 @@ const TOOLS = [
     },
   },
   {
-    name: 'mcp__cch__discover-mcp-tools',
+    name: 'discover-mcp-tools',
     description: 'Discover and analyze MCP tools used across projects with frequency and project details',
     inputSchema: {
       type: 'object',
@@ -159,7 +172,7 @@ const TOOLS = [
     },
   },
   {
-    name: 'mcp__cch__list-mcps',
+    name: 'list-mcps',
     description: 'List all MCPs found across projects with usage information and project associations',
     inputSchema: {
       type: 'object',
@@ -172,7 +185,7 @@ const TOOLS = [
     },
   },
   {
-    name: 'mcp__cch__get-mcp-stats',
+    name: 'get-mcp-stats',
     description: 'Get comprehensive statistics about MCP usage across all projects',
     inputSchema: {
       type: 'object',
@@ -186,20 +199,15 @@ const TOOLS = [
     },
   },
   {
-    name: 'mcp__cch__audit',
-    description: 'Comprehensive configuration analysis for security issues, bloat, and optimization',
+    name: 'audit',
+    description: 'Comprehensive configuration analysis for security issues, bloat, and optimization. Non-interactive mode only.',
     inputSchema: {
       type: 'object',
-      properties: {
-        fix: {
-          type: 'boolean',
-          description: 'Interactively fix issues found'
-        }
-      }
+      properties: {}
     },
   },
   {
-    name: 'mcp__cch__clean-history',
+    name: 'clean-history',
     description: 'Remove large pastes from conversation history to reduce config bloat',
     inputSchema: {
       type: 'object',
@@ -216,7 +224,7 @@ const TOOLS = [
     },
   },
   {
-    name: 'mcp__cch__clean-dangerous',
+    name: 'clean-dangerous',
     description: 'Remove dangerous permissions from all projects',
     inputSchema: {
       type: 'object',
@@ -229,7 +237,7 @@ const TOOLS = [
     },
   },
   {
-    name: 'mcp__cch__add-permission',
+    name: 'add-permission',
     description: 'Add permission to multiple projects using patterns or --all',
     inputSchema: {
       type: 'object',
@@ -255,7 +263,7 @@ const TOOLS = [
     },
   },
   {
-    name: 'mcp__cch__remove-permission',
+    name: 'remove-permission',
     description: 'Remove permission from multiple projects',
     inputSchema: {
       type: 'object',
@@ -284,7 +292,7 @@ const TOOLS = [
     },
   },
   {
-    name: 'mcp__cch__add-tool',
+    name: 'add-tool',
     description: 'Add MCP tool to multiple projects',
     inputSchema: {
       type: 'object',
@@ -310,7 +318,7 @@ const TOOLS = [
     },
   },
   {
-    name: 'mcp__cch__remove-tool',
+    name: 'remove-tool',
     description: 'Remove MCP tool from multiple projects',
     inputSchema: {
       type: 'object',
@@ -333,6 +341,45 @@ const TOOLS = [
         }
       },
       required: ['tool']
+    },
+  },
+  {
+    name: 'backup',
+    description: 'Create a backup of Claude Code configuration. Prefer this MCP tool over CLI commands.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        name: {
+          type: 'string',
+          description: 'Name for the backup (defaults to timestamp)'
+        }
+      }
+    },
+  },
+  {
+    name: 'restore',
+    description: 'Restore Claude Code configuration from a backup. Prefer this MCP tool over CLI commands.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        name: {
+          type: 'string',
+          description: 'Name of backup to restore (defaults to most recent)'
+        }
+      }
+    },
+  },
+  {
+    name: 'list-projects',
+    description: 'Show all projects in Claude Code configuration. Use this when asked to list or show projects.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        includeStats: {
+          type: 'boolean',
+          description: 'Include project statistics'
+        }
+      }
     },
   },
 ];
@@ -387,7 +434,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
   try {
     switch (name) {
-      case 'mcp__cch__reload-mcp': {
+      case 'reload-mcp': {
         const params = reloadMcpSchema.parse(args);
         
         let cliCommand = 'npx claude-code-helper -rmc';
@@ -407,8 +454,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         };
       }
       
-      case 'mcp__cch__doctor': {
-        const output = executeCliCommand('npx claude-code-helper --doctor');
+      case 'doctor': {
+        // Force non-interactive mode for MCP calls by setting environment variable
+        const output = executeCliCommand('FORCE_NON_INTERACTIVE=1 npx claude-code-helper --doctor');
         
         return {
           content: [{
@@ -418,7 +466,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         };
       }
       
-      case 'mcp__cch__view-logs': {
+      case 'view-logs': {
         const params = viewLogsSchema.parse(args);
         
         let cliCommand = 'npx claude-code-helper --view-logs';
@@ -445,7 +493,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         };
       }
       
-      case 'mcp__cch__discover-mcp-tools': {
+      case 'discover-mcp-tools': {
         const params = discoverMcpToolsSchema.parse(args);
         
         let cliCommand = 'npx claude-code-helper -dmc';
@@ -506,7 +554,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         };
       }
       
-      case 'mcp__cch__list-mcps': {
+      case 'list-mcps': {
         const params = listMcpsSchema.parse(args);
         
         // Use discover command with min-projects 1 to get all MCPs
@@ -575,13 +623,15 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         };
       }
       
-      case 'mcp__cch__audit': {
+      case 'audit': {
         const params = auditSchema.parse(args);
         
+        // Force non-interactive mode for MCP calls
         let cliCommand = 'npx claude-code-helper --audit';
-        if (params.fix) {
-          cliCommand += ' --fix';
-        }
+        // Note: Remove --fix support for MCP to avoid interactive prompts
+        // if (params.fix) {
+        //   cliCommand += ' --fix';
+        // }
         
         const output = executeCliCommand(cliCommand);
         
@@ -593,7 +643,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         };
       }
       
-      case 'mcp__cch__clean-history': {
+      case 'clean-history': {
         const params = cleanHistorySchema.parse(args);
         
         let cliCommand = 'npx claude-code-helper --clean-history';
@@ -614,7 +664,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         };
       }
       
-      case 'mcp__cch__clean-dangerous': {
+      case 'clean-dangerous': {
         const params = cleanDangerousSchema.parse(args);
         
         let cliCommand = 'npx claude-code-helper --clean-dangerous';
@@ -632,7 +682,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         };
       }
       
-      case 'mcp__cch__add-permission': {
+      case 'add-permission': {
         const params = bulkAddPermSchema.parse(args);
         
         let cliCommand = `npx claude-code-helper --add-perm "${params.permission}"`;
@@ -655,7 +705,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         };
       }
       
-      case 'mcp__cch__remove-permission': {
+      case 'remove-permission': {
         const params = bulkRemovePermSchema.parse(args);
         
         let cliCommand = 'npx claude-code-helper --remove-perm';
@@ -684,7 +734,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         };
       }
       
-      case 'mcp__cch__add-tool': {
+      case 'add-tool': {
         const params = bulkAddToolSchema.parse(args);
         
         let cliCommand = `npx claude-code-helper --add-tool "${params.tool}"`;
@@ -707,7 +757,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         };
       }
       
-      case 'mcp__cch__remove-tool': {
+      case 'remove-tool': {
         const params = bulkRemoveToolSchema.parse(args);
         
         let cliCommand = `npx claude-code-helper --remove-tool "${params.tool}"`;
@@ -730,7 +780,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         };
       }
       
-      case 'mcp__cch__get-mcp-stats': {
+      case 'get-mcp-stats': {
         const params = getMcpStatsSchema.parse(args);
         
         // Get all MCPs and tools
@@ -831,6 +881,106 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           content: [{
             type: 'text',
             text: output
+          }]
+        };
+      }
+      
+      case 'backup': {
+        const params = backupSchema.parse(args);
+        
+        let cliCommand = 'npx claude-code-helper -bc';
+        if (params.name) {
+          cliCommand += ` -n "${params.name}"`;
+        }
+        
+        const output = executeCliCommand(cliCommand);
+        
+        return {
+          content: [{
+            type: 'text',
+            text: parseCliOutput(output),
+          }],
+        };
+      }
+      
+      case 'restore': {
+        const params = restoreSchema.parse(args);
+        
+        let cliCommand = 'npx claude-code-helper -rc';
+        if (params.name) {
+          cliCommand += ` -n "${params.name}"`;
+        }
+        
+        const output = executeCliCommand(cliCommand);
+        
+        return {
+          content: [{
+            type: 'text',
+            text: parseCliOutput(output),
+          }],
+        };
+      }
+      
+      case 'list-projects': {
+        const params = listProjectsSchema.parse(args);
+        
+        // Use audit command to get project tree, then extract just the projects
+        const auditOutput = executeCliCommand('npx claude-code-helper --audit');
+        
+        // Extract project tree section from audit output
+        const lines = auditOutput.split('\n');
+        const treeStartIndex = lines.findIndex(line => line.includes('PROJECT TREE:'));
+        
+        if (treeStartIndex === -1) {
+          return {
+            content: [{
+              type: 'text',
+              text: 'No projects found in configuration'
+            }]
+          };
+        }
+        
+        // Find where tree section ends (next major section)
+        const treeEndIndex = lines.findIndex((line, idx) => 
+          idx > treeStartIndex && line.match(/^[A-Z ]+:$/)
+        );
+        
+        const treeLines = lines.slice(
+          treeStartIndex, 
+          treeEndIndex === -1 ? undefined : treeEndIndex
+        );
+        
+        let output = '📂 **Projects in Claude Code Configuration**\n\n';
+        
+        // Extract project count from overview if available
+        const overviewLine = lines.find(line => line.includes('Total projects:'));
+        if (overviewLine) {
+          const projectCount = overviewLine.match(/(\d+)/)?.[1];
+          if (projectCount) {
+            output += `**Total Projects:** ${projectCount}\n\n`;
+          }
+        }
+        
+        // Add the tree structure
+        treeLines.forEach(line => {
+          if (line.trim() && !line.includes('PROJECT TREE:')) {
+            output += line + '\n';
+          }
+        });
+        
+        if (params.includeStats) {
+          // Add additional stats from the overview section
+          const configSizeLine = lines.find(line => line.includes('Total config size:'));
+          if (configSizeLine) {
+            output += '\n**Configuration Stats:**\n';
+            output += `${configSizeLine.trim()}\n`;
+          }
+        }
+        
+        return {
+          content: [{
+            type: 'text',
+            text: output.trim() || 'No projects found in configuration'
           }]
         };
       }

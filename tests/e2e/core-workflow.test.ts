@@ -88,8 +88,8 @@ describe('MCP Server Tools', () => {
     
     // Check tool names
     const toolNames = parsed.result.tools.map((t: any) => t.name);
-    expect(toolNames).toContain('mcp__cch__doctor');
-    expect(toolNames).toContain('mcp__cch__discover-mcp-tools');
+    expect(toolNames).toContain('doctor');
+    expect(toolNames).toContain('discover-mcp-tools');
   });
   
   test('doctor tool works through MCP', async () => {
@@ -100,7 +100,7 @@ describe('MCP Server Tools', () => {
       id: 2,
       method: 'tools/call',
       params: {
-        name: 'mcp__cch__doctor',
+        name: 'doctor',
         arguments: {}
       }
     });

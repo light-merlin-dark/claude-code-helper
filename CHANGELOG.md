@@ -2,6 +2,26 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.3.4] - 2025-06-23
+
+### 🚀 MCP Developer Experience Improvements
+
+### Added
+- **Simple MCP Command Names**: Renamed all MCP tools from verbose `mcp__cch__mcp__cch__*` format to clean, simple names (e.g., `audit`, `doctor`, `backup`)
+- **New MCP Tools**: Added `backup`, `restore`, and `list-projects` MCP tools for complete CLI/MCP parity
+- **Non-Interactive MCP Mode**: Removed interactive prompts from MCP tool implementations to prevent blocking
+
+### Changed
+- **Tool Descriptions**: Updated all MCP tool descriptions to encourage MCP tool usage over direct CLI calls
+- **Interactive Prompts**: Disabled interactive features (`--fix` mode in audit, confirmation prompts in doctor) for MCP tools to ensure smooth automation
+- **Test Expectations**: Fixed MCP integration tests to handle new response formats
+
+### Technical Details
+- Renamed 13 MCP commands to simple names (e.g., `mcp__cch__audit` -> `audit`)
+- Added environment variable `FORCE_NON_INTERACTIVE=1` for doctor command in MCP mode
+- Added comprehensive backup/restore functionality through MCP tools
+- Added project listing capability that extracts project tree from audit output
+
 ## [2.3.3] - 2025-06-23
 
 ### 📸 Marketing Enhancement

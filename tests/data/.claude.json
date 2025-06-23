@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "projects": {
+    "work/api": {
+      "allowedCommands": []
+    },
+    "work/frontend": {
+      "allowedCommands": []
+    },
+    "personal/blog": {
+      "allowedCommands": []
+    },
+    "test-api": {
+      "allowedCommands": []
+    }
+  }
+}

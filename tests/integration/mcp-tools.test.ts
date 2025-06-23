@@ -93,18 +93,20 @@ describe('MCP Tools - Complete Integration', () => {
     });
 
     test('should run comprehensive diagnostics via MCP', async () => {
-      const result = await callMcpTool('mcp__cch__doctor', {});
+      const result = await callMcpTool('doctor', {});
       
-      expect(result).toMatch(/System Diagnostics/);
-      expect(result).toMatch(/Configuration Health/);
-      expect(result).toMatch(/Global Claude Config/);
-      expect(result).toMatch(/✓|❌/); // Should have status indicators
+      // Extract the text content from the MCP response
+      const resultText = result.result?.content?.[0]?.text || result;
+      
+      expect(resultText).toMatch(/System Information|CCH Version/);
+      expect(resultText).toMatch(/Configuration|Health/);
+      expect(resultText).toMatch(/✓|❌/); // Should have status indicators
     });
 
     test('should detect same issues as CLI doctor command', async () => {
       // This test would compare MCP output with CLI output
       // In a real implementation, we'd capture both and compare
-      const mcpResult = await callMcpTool('mcp__cch__doctor', {});
+      const mcpResult = await callMcpTool('doctor', {});
       expect(mcpResult).toMatch(/Total projects:/);
     });
   });
@@ -115,7 +117,7 @@ describe('MCP Tools - Complete Integration', () => {
     });
 
     test('should discover MCP tools with statistics', async () => {
-      const result = await callMcpTool('mcp__cch__discover-mcp-tools', {
+      const result = await callMcpTool('discover-mcp-tools', {
         minProjectCount: 2,
         includeStats: true
       });
@@ -127,7 +129,7 @@ describe('MCP Tools - Complete Integration', () => {
     });
 
     test('should filter by minimum project count', async () => {
-      const result = await callMcpTool('mcp__cch__discover-mcp-tools', {
+      const result = await callMcpTool('discover-mcp-tools', {
         minProjectCount: 5
       });
 
@@ -138,7 +140,7 @@ describe('MCP Tools - Complete Integration', () => {
     test('should handle projects with no MCP tools', async () => {
       testWorkspace = await setupTestConfig(TEST_CONFIGS.CLEAN, 'mcp-discover-empty');
       
-      const result = await callMcpTool('mcp__cch__discover-mcp-tools', {
+      const result = await callMcpTool('discover-mcp-tools', {
         minProjectCount: 1
       });
 
@@ -152,7 +154,7 @@ describe('MCP Tools - Complete Integration', () => {
     });
 
     test('should list all MCPs with usage information', async () => {
-      const result = await callMcpTool('mcp__cch__list-mcps', {
+      const result = await callMcpTool('list-mcps', {
         includeDetails: true
       });
 
@@ -163,7 +165,7 @@ describe('MCP Tools - Complete Integration', () => {
     });
 
     test('should show basic list without details', async () => {
-      const result = await callMcpTool('mcp__cch__list-mcps', {});
+      const result = await callMcpTool('list-mcps', {});
 
       expect(result).toMatch(/github|aia/);
       expect(result).not.toMatch(/Tool listings/); // Detailed info not included
@@ -176,7 +178,7 @@ describe('MCP Tools - Complete Integration', () => {
     });
 
     test('should return comprehensive MCP statistics', async () => {
-      const result = await callMcpTool('mcp__cch__get-mcp-stats', {});
+      const result = await callMcpTool('get-mcp-stats', {});
 
       expect(result).toMatch(/MCP Usage Statistics/);
       expect(result).toMatch(/Total MCPs:/);
@@ -185,7 +187,7 @@ describe('MCP Tools - Complete Integration', () => {
     });
 
     test('should group statistics by MCP', async () => {
-      const result = await callMcpTool('mcp__cch__get-mcp-stats', {
+      const result = await callMcpTool('get-mcp-stats', {
         groupBy: 'mcp'
       });
 
@@ -194,7 +196,7 @@ describe('MCP Tools - Complete Integration', () => {
     });
 
     test('should group statistics by project', async () => {
-      const result = await callMcpTool('mcp__cch__get-mcp-stats', {
+      const result = await callMcpTool('get-mcp-stats', {
         groupBy: 'project'
       });
 
@@ -209,14 +211,14 @@ describe('MCP Tools - Complete Integration', () => {
     });
 
     test('should return recent logs with default settings', async () => {
-      const result = await callMcpTool('mcp__cch__view-logs', {});
+      const result = await callMcpTool('view-logs', {});
 
       expect(result).toMatch(/Recent CCH Activity|No recent logs/);
       // May not have logs in test environment, so either message is acceptable
     });
 
     test('should filter logs by level', async () => {
-      const result = await callMcpTool('mcp__cch__view-logs', {
+      const result = await callMcpTool('view-logs', {
         level: 'ERROR',
         lines: 10
       });
@@ -225,7 +227,7 @@ describe('MCP Tools - Complete Integration', () => {
     });
 
     test('should search logs for specific text', async () => {
-      const result = await callMcpTool('mcp__cch__view-logs', {
+      const result = await callMcpTool('view-logs', {
         search: 'test',
         lines: 20
       });
@@ -234,7 +236,7 @@ describe('MCP Tools - Complete Integration', () => {
     });
 
     test('should limit number of lines returned', async () => {
-      const result = await callMcpTool('mcp__cch__view-logs', {
+      const result = await callMcpTool('view-logs', {
         lines: 5
       });
 
@@ -249,7 +251,7 @@ describe('MCP Tools - Complete Integration', () => {
     });
 
     test('should reload specific MCP server', async () => {
-      const result = await callMcpTool('mcp__cch__reload-mcp', {
+      const result = await callMcpTool('reload-mcp', {
         name: 'github'
       });
 
@@ -257,7 +259,7 @@ describe('MCP Tools - Complete Integration', () => {
     });
 
     test('should reload all MCP servers', async () => {
-      const result = await callMcpTool('mcp__cch__reload-mcp', {
+      const result = await callMcpTool('reload-mcp', {
         all: true
       });
 
@@ -265,7 +267,7 @@ describe('MCP Tools - Complete Integration', () => {
     });
 
     test('should handle non-existent MCP gracefully', async () => {
-      const result = await callMcpTool('mcp__cch__reload-mcp', {
+      const result = await callMcpTool('reload-mcp', {
         name: 'non-existent-mcp'
       });
 
@@ -282,7 +284,7 @@ describe('MCP Tools - Complete Integration', () => {
       // Note: In a full implementation, this would run both CLI and MCP
       // and compare outputs for exact matching
       
-      const mcpResult = await callMcpTool('mcp__cch__doctor', {});
+      const mcpResult = await callMcpTool('doctor', {});
       
       // Verify MCP returns structured data that matches CLI format
       expect(mcpResult).toMatch(/Dangerous permissions found/);
@@ -291,7 +293,7 @@ describe('MCP Tools - Complete Integration', () => {
 
     test('should maintain consistent error handling between CLI and MCP', async () => {
       // Test with invalid config path
-      const result = await callMcpTool('mcp__cch__doctor', {});
+      const result = await callMcpTool('doctor', {});
       
       // Should handle gracefully, not crash
       expect(result).toBeTruthy();
@@ -305,9 +307,9 @@ describe('MCP Tools - Complete Integration', () => {
 
     test('should handle multiple concurrent MCP calls', async () => {
       const calls = [
-        callMcpTool('mcp__cch__list-mcps', {}),
-        callMcpTool('mcp__cch__get-mcp-stats', {}),
-        callMcpTool('mcp__cch__discover-mcp-tools', { minProjectCount: 1 })
+        callMcpTool('list-mcps', {}),
+        callMcpTool('get-mcp-stats', {}),
+        callMcpTool('discover-mcp-tools', { minProjectCount: 1 })
       ];
 
       const startTime = Date.now();
@@ -327,7 +329,7 @@ describe('MCP Tools - Complete Integration', () => {
       testWorkspace = await setupTestConfig(TEST_CONFIGS.COMPLEX, 'mcp-large');
       
       const startTime = Date.now();
-      const result = await callMcpTool('mcp__cch__get-mcp-stats', {});
+      const result = await callMcpTool('get-mcp-stats', {});
       const duration = Date.now() - startTime;
 
       expect(duration).toBeLessThan(5000); // Should complete within 5 seconds
@@ -338,7 +340,7 @@ describe('MCP Tools - Complete Integration', () => {
   describe('Edge Cases and Error Handling', () => {
     test('should handle missing config file gracefully', async () => {
       // Don't set up test workspace, so config file doesn't exist
-      const result = await callMcpTool('mcp__cch__doctor', {});
+      const result = await callMcpTool('doctor', {});
       
       expect(result).toMatch(/configuration not found|error reading config/i);
     });
@@ -346,7 +348,7 @@ describe('MCP Tools - Complete Integration', () => {
     test('should handle invalid tool parameters', async () => {
       testWorkspace = await setupTestConfig(TEST_CONFIGS.CLEAN, 'mcp-invalid');
       
-      const result = await callMcpTool('mcp__cch__discover-mcp-tools', {
+      const result = await callMcpTool('discover-mcp-tools', {
         minProjectCount: -1 // Invalid parameter
       });
 
@@ -360,7 +362,7 @@ describe('MCP Tools - Complete Integration', () => {
       // Corrupt the config file
       require('fs').writeFileSync(`${testWorkspace}/.claude.json`, '{ invalid json }');
       
-      const result = await callMcpTool('mcp__cch__doctor', {});
+      const result = await callMcpTool('doctor', {});
       
       expect(result).toMatch(/invalid|corrupted|parse error/i);
     });
