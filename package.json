@@ -1,6 +1,6 @@
 {
   "name": "@light-merlin-dark/claude-code-helper",
-  "version": "2.3.2",
+  "version": "2.3.3",
   "description": "CLI tool for managing Claude Code configurations",
   "main": "dist/index.js",
   "bin": {
