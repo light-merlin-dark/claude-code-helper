@@ -10,12 +10,15 @@ import { logger } from '../utils/logger';
 import { promptConfirm } from '../utils/prompt';
 import { createBackup } from '../services/backup';
 import { Analyzer } from '../services/analyzer';
+import { SecretDetector } from '../services/secret-detector';
 
 export interface ConfigCleanOptions {
   force?: boolean;
   testMode?: boolean;
   dryRun?: boolean;
   aggressive?: boolean;
+  maskSecrets?: boolean;
+  showSecrets?: boolean;
 }
 
 export interface CleanupAnalysis {
@@ -24,6 +27,8 @@ export interface CleanupAnalysis {
   projectCount: number;
   totalPastes: number;
   largePastes: number;
+  secretsFound: number;
+  highConfidenceSecrets: number;
   estimatedSizeAfter: number;
   estimatedSizeAfterMB: number;
   estimatedReduction: number;
@@ -35,6 +40,7 @@ export interface CleanupAnalysis {
 export interface CleanupResult {
   pastesRemoved: number;
   permissionsRemoved: number;
+  secretsMasked: number;
   projectsModified: number;
   sizeReduction: number;
   backupPath?: string;
@@ -44,14 +50,14 @@ export interface CleanupResult {
  * Main config cleanup command with analysis and confirmation
  */
 export async function cleanConfig(options: ConfigCleanOptions = {}): Promise<CleanupResult> {
-  const { force = false, testMode = false, dryRun = false, aggressive = false } = options;
+  const { force = false, testMode = false, dryRun = false, aggressive = false, maskSecrets = false, showSecrets = false } = options;
   
   console.log(chalk.blue('🔍 Analyzing Claude configuration...'));
   console.log('');
   
   // Step 1: Load and analyze config
   const config = await loadClaudeConfig(testMode) as ClaudeConfig;
-  const analysis = await analyzeConfigForCleanup(config, aggressive);
+  const analysis = await analyzeConfigForCleanup(config, aggressive, maskSecrets || showSecrets);
   
   // Step 2: Show analysis results
   displayAnalysis(analysis);
@@ -68,6 +74,7 @@ export async function cleanConfig(options: ConfigCleanOptions = {}): Promise<Cle
       return {
         pastesRemoved: 0,
         permissionsRemoved: 0,
+        secretsMasked: 0,
         projectsModified: 0,
         sizeReduction: 0
       };
@@ -84,7 +91,7 @@ export async function cleanConfig(options: ConfigCleanOptions = {}): Promise<Cle
   
   // Step 5: Perform cleanup
   console.log(chalk.blue('🧹 Performing cleanup...'));
-  const result = await performCleanup(config, analysis, { dryRun, testMode, aggressive });
+  const result = await performCleanup(config, analysis, { dryRun, testMode, aggressive, maskSecrets });
   result.backupPath = backupPath;
   
   // Step 6: Show results
@@ -96,8 +103,9 @@ export async function cleanConfig(options: ConfigCleanOptions = {}): Promise<Cle
 /**
  * Analyze config to determine cleanup potential
  */
-async function analyzeConfigForCleanup(config: ClaudeConfig, aggressive: boolean): Promise<CleanupAnalysis> {
+async function analyzeConfigForCleanup(config: ClaudeConfig, aggressive: boolean, includeSecrets: boolean = false): Promise<CleanupAnalysis> {
   const analyzer = new Analyzer();
+  const secretDetector = new SecretDetector();
   const report = await analyzer.analyzeConfig(config);
   
   const currentSizeBytes = Buffer.byteLength(JSON.stringify(config), 'utf8');
@@ -132,6 +140,10 @@ async function analyzeConfigForCleanup(config: ClaudeConfig, aggressive: boolean
   // Count dangerous permissions
   const dangerousPermissions = report.security.length;
   
+  // Secret analysis
+  const secretsFound = report.secrets.totalCount;
+  const highConfidenceSecrets = report.secrets.highConfidenceCount;
+  
   // Estimate size after cleanup
   const estimatedSizeAfter = Math.max(
     currentSizeBytes - estimatedPasteReduction,
@@ -142,6 +154,11 @@ async function analyzeConfigForCleanup(config: ClaudeConfig, aggressive: boolean
   
   // Generate recommendations
   const recommendations: string[] = [];
+  if (highConfidenceSecrets > 0) {
+    recommendations.push(`🚨 CRITICAL: Mask ${highConfidenceSecrets} high-confidence secrets immediately`);
+  } else if (secretsFound > 0) {
+    recommendations.push(`🔍 Review ${secretsFound} potential secrets for security`);
+  }
   if (largePastesCount > 0) {
     recommendations.push(`Remove ${largePastesCount} large pastes to save ~${(estimatedPasteReduction / 1024 / 1024).toFixed(1)}MB`);
   }
@@ -161,6 +178,8 @@ async function analyzeConfigForCleanup(config: ClaudeConfig, aggressive: boolean
     projectCount: Object.keys(config.projects || {}).length,
     totalPastes: report.bloat.totalPastes,
     largePastes: largePastesCount,
+    secretsFound,
+    highConfidenceSecrets,
     estimatedSizeAfter,
     estimatedSizeAfterMB: estimatedSizeAfter / 1024 / 1024,
     estimatedReduction,
@@ -183,6 +202,13 @@ function displayAnalysis(analysis: CleanupAnalysis): void {
   console.log(`  Projects: ${chalk.yellow(analysis.projectCount.toString())}`);
   console.log(`  Total pastes: ${chalk.yellow(analysis.totalPastes.toString())}`);
   console.log(`  Large pastes: ${chalk.yellow(analysis.largePastes.toString())}`);
+  if (analysis.secretsFound > 0) {
+    if (analysis.highConfidenceSecrets > 0) {
+      console.log(`  🚨 Secrets: ${chalk.red(analysis.highConfidenceSecrets.toString())} high-confidence, ${chalk.yellow((analysis.secretsFound - analysis.highConfidenceSecrets).toString())} potential`);
+    } else {
+      console.log(`  🔍 Potential secrets: ${chalk.yellow(analysis.secretsFound.toString())}`);
+    }
+  }
   if (analysis.dangerousPermissions > 0) {
     console.log(`  Dangerous permissions: ${chalk.red(analysis.dangerousPermissions.toString())}`);
   }
@@ -220,13 +246,17 @@ function displayAnalysis(analysis: CleanupAnalysis): void {
 async function performCleanup(
   config: ClaudeConfig, 
   analysis: CleanupAnalysis, 
-  options: { dryRun: boolean; testMode: boolean; aggressive: boolean }
+  options: { dryRun: boolean; testMode: boolean; aggressive: boolean; maskSecrets: boolean }
 ): Promise<CleanupResult> {
-  const { dryRun, testMode, aggressive } = options;
+  const { dryRun, testMode, aggressive, maskSecrets } = options;
   
   let pastesRemoved = 0;
   let permissionsRemoved = 0;
+  let secretsMasked = 0;
   let projectsModified = 0;
+  
+  // Initialize secret detector if needed
+  const secretDetector = maskSecrets ? new SecretDetector() : null;
   
   // Clean large pastes and dangerous permissions
   Object.entries(config.projects || {}).forEach(([projectName, project]) => {
@@ -271,6 +301,17 @@ async function performCleanup(
             }
           }
         }
+        
+        // Mask secrets in entry display text if requested
+        if (maskSecrets && secretDetector && entry.display && !dryRun) {
+          const { maskedText, count } = secretDetector.maskSecretsInText(entry.display);
+          if (count > 0) {
+            entry.display = maskedText;
+            secretsMasked += count;
+            projectModified = true;
+          }
+        }
+        
         return entry;
       });
     }
@@ -306,6 +347,7 @@ async function performCleanup(
   return {
     pastesRemoved,
     permissionsRemoved,
+    secretsMasked,
     projectsModified,
     sizeReduction
   };
@@ -327,6 +369,10 @@ function displayResults(analysis: CleanupAnalysis, result: CleanupResult, dryRun
     console.log(`${dryRun ? 'Would remove' : 'Removed'} ${chalk.yellow(result.permissionsRemoved.toString())} dangerous permissions`);
   }
   
+  if (result.secretsMasked > 0) {
+    console.log(`${dryRun ? 'Would mask' : 'Masked'} ${chalk.yellow(result.secretsMasked.toString())} secrets for security`);
+  }
+  
   if (result.projectsModified > 0) {
     console.log(`${dryRun ? 'Would modify' : 'Modified'} ${chalk.yellow(result.projectsModified.toString())} projects`);
   }
@@ -341,9 +387,13 @@ function displayResults(analysis: CleanupAnalysis, result: CleanupResult, dryRun
     console.log(`Backup: ${chalk.blue(result.backupPath)}`);
   }
   
-  if (!dryRun && (result.pastesRemoved > 0 || result.permissionsRemoved > 0)) {
+  if (!dryRun && (result.pastesRemoved > 0 || result.permissionsRemoved > 0 || result.secretsMasked > 0)) {
     console.log('');
-    console.log(chalk.green('🎉 Config cleanup successful! Claude Code should feel snappier.'));
+    if (result.secretsMasked > 0) {
+      console.log(chalk.green('🔒 Secrets masked and config optimized! Your data is now more secure.'));
+    } else {
+      console.log(chalk.green('🎉 Config cleanup successful! Claude Code should feel snappier.'));
+    }
   } else if (dryRun) {
     console.log('');
     console.log(chalk.blue('Run without --dry-run to perform actual cleanup.'));

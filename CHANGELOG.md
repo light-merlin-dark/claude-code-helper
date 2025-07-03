@@ -2,6 +2,29 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.3.6] - 2025-07-02
+
+### 🚨 Critical Security: Always-On Secret Detection
+
+### Added
+- **Always-On Secret Detection**: Automatic secret scanning on EVERY CLI command execution
+- **Prominent Security Alerts**: Impossible-to-miss warnings showing exposed secrets with masked values
+- **Emergency Command**: New `--mask-secrets-now` for immediate one-command secret remediation
+- **15+ Secret Patterns**: Detects AWS keys, GitHub tokens, API keys, database URLs, private keys, and more
+- **Agent-Optimized Display**: Shows exact secret type, masked value, and location for quick action
+
+### Enhanced
+- **Pre-Command Warnings**: Secret alerts appear before any command execution
+- **Force Mode Security**: Emergency masking with automatic backup, no confirmations needed
+- **Comprehensive Detection**: Scans conversation history, pasted content, and all configuration data
+- **Clear Remediation Path**: Single command solution with detailed results
+
+### Security
+- **Zero-Tolerance Approach**: Makes secret exposure impossible to ignore
+- **Safe Masking**: Preserves partial identifiers (first/last 3 chars) while securing data
+- **Always Backup**: Automatic compressed backup before any secret masking
+- **High Confidence Prioritization**: Critical secrets highlighted with type-specific patterns
+
 ## [2.3.5] - 2025-07-02
 
 ### 🧹 AI-Friendly Config Cleanup

@@ -11,9 +11,11 @@ Native MCP server that gives AI agents direct access to manage configurations, a
 
 ## 🚀 Key Capabilities
 
+**🚨 Always-On Security**: Automatic secret detection on EVERY command with immediate one-command remediation.
+
 **🤖 AI-Native Design**: First-class MCP server with 15+ tools for configuration management, diagnostics, and bulk operations.
 
-**🛡️ Smart Safety**: Prevents dangerous commands, validates permissions, and creates automatic backups before changes.
+**🛡️ Smart Safety**: Prevents dangerous commands, validates permissions, masks exposed secrets, and creates automatic backups.
 
 **📊 Global Intelligence**: Analyzes your entire Claude Code workspace via global config, discovering usage patterns across all projects.
 
@@ -93,6 +95,7 @@ That's it! Restart Claude Code and you're ready to go.
 #### Configuration Management Tools
 - `audit` - Comprehensive configuration analysis
   - Security analysis with dangerous permission detection
+  - Automatic secret detection and reporting
   - Configuration bloat detection
   - Project overview with tree structure
   - Actionable recommendations
@@ -170,6 +173,8 @@ Returns frequently used MCP tools across your projects:
 ```
 
 ### 🛡️ Enterprise-Ready Safety
+- **Always-On Secret Detection**: Automatic scanning on EVERY command execution
+- **Emergency Response**: `cch --mask-secrets-now` for immediate remediation
 - **Blocked Commands**: Prevents `rm -rf /`, fork bombs, disk formatting
 - **Warning System**: Confirms risky operations before execution
 - **Smart Expansion**: `docker` → `docker:*` automatically
@@ -194,6 +199,11 @@ npx @light-merlin-dark/claude-code-helper --help
 ## 🚀 CLI Quick Start
 
 ```bash
+# Security & Config Health
+cch --audit                # Full security/config analysis (includes secrets)
+cch --mask-secrets-now     # EMERGENCY: Immediate secret masking
+cch --clean-config         # Interactive config cleanup with analysis
+
 # Permission Management
 cch -lp                    # List permissions
 cch -add docker            # Add with smart expansion (docker:*)
@@ -214,6 +224,9 @@ cch -rc --name pre-update  # Restore backup
 
 | Command | Alias | Description |
 |---------|-------|-------------|
+| `--audit` | - | Comprehensive security & config analysis |
+| `--mask-secrets-now` | - | 🚨 Emergency secret masking (force mode) |
+| `--clean-config` | - | Interactive config cleanup |
 | `--list-permissions` | `-lp` | List your permissions |
 | `--add-permission` | `-add` | Add permission with smart expansion |
 | `--discover` | `-dp` | Discover frequently used permissions |
@@ -229,11 +242,13 @@ cch -rc --name pre-update  # Restore backup
 
 **Dual Interface**: MCP server for AI agents + CLI for manual control, sharing the same core functionality.
 
+**Always-On Security**: Every command execution includes automatic secret detection with immediate remediation options.
+
 **Smart Permissions**: Stored in `~/.cch/permissions.json` with automatic expansion (`docker` → `docker:*`) and safety validation.
 
 **Global Analysis**: Reads `~/.claude.json` to analyze all your projects at once, not just individual directories.
 
-**Safety First**: Automatic backups, dangerous command blocking, and detailed change tracking for all operations.
+**Safety First**: Automatic backups, dangerous command blocking, secret masking, and detailed change tracking for all operations.
 
 ## 🔧 Development
 

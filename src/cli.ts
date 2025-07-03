@@ -37,6 +37,9 @@ import { bulkAddPermission, bulkRemovePermission, bulkAddTool, bulkRemoveTool } 
 import { ensureBaseCommandsExist } from './core/config';
 import { getBaseCommandsPath } from './core/paths';
 
+// Secret warning service
+import { secretWarningService } from './services/secret-warning';
+
 function getVersion(): string {
   try {
     // In production, package.json is at the package root
@@ -68,8 +71,13 @@ QUICK START (for AI agents):
   cch -ap                    Apply permissions to all projects
 
 AI AGENT EXAMPLES:
-  # Check config health and size
-  cch --audit --stats        # Quick stats: size, projects, issues
+  # Check config health and size (includes secret detection)
+  cch --audit --stats        # Quick stats: size, projects, issues, secrets
+  
+  # Secret detection and security
+  cch --audit --show-secrets # Detailed report of detected secrets
+  cch --mask-secrets-now     # EMERGENCY: Immediate secret masking (force)
+  cch --clean-config --mask-secrets  # Auto-mask secrets with backup
   
   # Clean bloated config (interactive with confirmation)
   cch --clean-config         # Shows before/after, asks to proceed
@@ -109,11 +117,14 @@ Permissions:
   -ap, --apply-permissions   Apply permissions to all projects
 
 Config Analysis & Cleanup:
-  --audit                    Full analysis: security, bloat, performance impact
+  --audit                    Full analysis: security, secrets, bloat, performance
   --audit --fix              Interactive fix mode with confirmations
   --audit --stats            Quick size/project stats
+  --audit --show-secrets     Display detailed secret detection report
   --clean-config             Smart config cleanup with before/after preview
   --clean-config --force     Auto-cleanup with safe defaults (no prompts)
+  --clean-config --mask-secrets  Automatically mask detected secrets
+  --mask-secrets-now         🚨 EMERGENCY: Immediate secret masking (force mode)
   --clean-history            Remove large pastes (100+ lines) from history
   --clean-dangerous          Remove all dangerous permissions
 
@@ -157,11 +168,16 @@ Utilities:
 
 💡 INTELLIGENT EXAMPLES:
 Config Health Check:
-  cch --audit --stats        # "Config: 45MB, 12 projects, 3 issues found"
+  cch --audit --stats        # "Config: 45MB, 12 projects, 3 issues, 🚨 Secrets: 2 high-confidence"
+  
+Secret Detection:
+  cch --audit --show-secrets # Shows detailed list: "High confidence: AWS keys, GitHub tokens"
+  cch --mask-secrets-now     # "🚨 EMERGENCY SECRET MASKING INITIATED... ✅ COMPLETED!"
+  cch --clean-config --mask-secrets # "Masked 8 secrets, saved backup"
   
 Config Cleanup Workflow:
   cch --clean-config         # Shows: "Current: 45MB → After: 8MB (83% reduction)"
-                            # "Remove 847 large pastes from 8 projects? [Y/n]"
+                            # "🚨 Secrets: 2 high-confidence, Remove 847 large pastes? [Y/n]"
 
 Permission Management:
   cch -lp                    # See numbered list
@@ -175,6 +191,7 @@ Bulk Operations:
   cch --add-tool github --projects "*-api"         # Add GitHub to API projects
 
 Emergency Cleanup:
+  cch --mask-secrets-now                           # 🚨 CRITICAL: Immediate secret masking
   cch --clean-config --force                       # Auto-cleanup, no prompts
   cch --clean-dangerous --force                    # Remove all risky permissions
 
@@ -226,6 +243,7 @@ export async function handleCLI(args: string[]): Promise<void> {
     // Audit and clean commands
     'audit': audit_,
     'clean-config': cleanConfig_,
+    'mask-secrets-now': maskSecretsNow_,
     'clean-history': cleanHistory_,
     'clean-dangerous': cleanDangerous_,
     
@@ -260,7 +278,7 @@ export async function handleCLI(args: string[]): Promise<void> {
                        !listPermissions_ && !lp && !discoverPermissions_ && !discover_ && !dp &&
                        !addPermission_ && !add_ && !add && !removePermission_ && !remove_ && !rm &&
                        !applyPermissions_ && !ap && !discoverMcp_ && !dmc && !reloadMcp_ && !rmc &&
-                       !audit_ && !cleanConfig_ && !cleanHistory_ && !cleanDangerous_ &&
+                       !audit_ && !cleanConfig_ && !maskSecretsNow_ && !cleanHistory_ && !cleanDangerous_ &&
                        !addPerm_ && !removePerm_ && !addTool_ && !removeTool_ && 
                        command !== 'install' && command !== 'uninstall';
     
@@ -272,6 +290,11 @@ export async function handleCLI(args: string[]): Promise<void> {
       if (!testMode) {
         await checkPermissionsOnStartup(testMode);
       }
+    }
+
+    // 🚨 CRITICAL: Always check for secrets on every command (except help and version)
+    if (!showingHelp && !version_ && !v && !isDeletingData) {
+      await secretWarningService.checkAndWarnSecrets(testMode);
     }
 
     const isBackup = backupConfig_ || bc;
@@ -288,6 +311,7 @@ export async function handleCLI(args: string[]): Promise<void> {
     // Audit and clean commands
     const isAudit = audit_;
     const isCleanConfig = cleanConfig_;
+    const isMaskSecretsNow = maskSecretsNow_;
     const isCleanHistory = cleanHistory_;
     const isCleanDangerous = cleanDangerous_;
     
@@ -390,27 +414,63 @@ export async function handleCLI(args: string[]): Promise<void> {
     } else if (isAudit) {
       const fixMode = options.fix || false;
       const statsMode = options.stats || false;
-      const result = await audit({ fix: fixMode, stats: statsMode, testMode });
+      const showSecretsMode = options['show-secrets'] || false;
+      const result = await audit({ fix: fixMode, stats: statsMode, showSecrets: showSecretsMode, testMode });
       console.log(result);
     } else if (isCleanConfig) {
       const aggressive = options.aggressive || false;
       const dryRun = options['dry-run'] || false;
+      const maskSecrets = options['mask-secrets'] || false;
+      const showSecrets = options['show-secrets'] || false;
       const result = await cleanConfig({
         force: isForce,
         testMode,
         dryRun,
-        aggressive
+        aggressive,
+        maskSecrets,
+        showSecrets
       });
       
-      if (!dryRun && (result.pastesRemoved > 0 || result.permissionsRemoved > 0)) {
+      if (!dryRun && (result.pastesRemoved > 0 || result.permissionsRemoved > 0 || result.secretsMasked > 0)) {
         console.log(`\n✓ Cleanup completed successfully!`);
-        console.log(`  Pastes removed: ${result.pastesRemoved}`);
-        console.log(`  Permissions removed: ${result.permissionsRemoved}`);
+        if (result.pastesRemoved > 0) console.log(`  Pastes removed: ${result.pastesRemoved}`);
+        if (result.permissionsRemoved > 0) console.log(`  Permissions removed: ${result.permissionsRemoved}`);
+        if (result.secretsMasked > 0) console.log(`  Secrets masked: ${result.secretsMasked}`);
         console.log(`  Projects modified: ${result.projectsModified}`);
         console.log(`  Size saved: ${(result.sizeReduction / 1024 / 1024).toFixed(1)} MB`);
         if (result.backupPath) {
           console.log(`  Backup: ${result.backupPath}`);
         }
+      }
+    } else if (isMaskSecretsNow) {
+      // Immediate secret masking with force - no confirmation needed
+      console.log('🚨 IMMEDIATE SECRET MASKING INITIATED...');
+      console.log('');
+      
+      const result = await cleanConfig({
+        force: true,
+        testMode,
+        dryRun: false,
+        aggressive: false,
+        maskSecrets: true,
+        showSecrets: false
+      });
+      
+      if (result.secretsMasked > 0 || result.pastesRemoved > 0 || result.permissionsRemoved > 0) {
+        console.log('✅ EMERGENCY SECRET CLEANUP COMPLETED!');
+        console.log('');
+        if (result.secretsMasked > 0) console.log(`🔒 Secrets masked: ${result.secretsMasked}`);
+        if (result.pastesRemoved > 0) console.log(`📄 Pastes removed: ${result.pastesRemoved}`);
+        if (result.permissionsRemoved > 0) console.log(`⚠️  Permissions removed: ${result.permissionsRemoved}`);
+        console.log(`📁 Projects secured: ${result.projectsModified}`);
+        console.log(`💾 Size saved: ${(result.sizeReduction / 1024 / 1024).toFixed(1)} MB`);
+        if (result.backupPath) {
+          console.log(`🔄 Backup: ${result.backupPath}`);
+        }
+        console.log('');
+        console.log('🎉 Your configuration is now secure!');
+      } else {
+        console.log('✅ No secrets found or already secured.');
       }
     } else if (isCleanHistory) {
       const projects = options.projects as string | undefined;

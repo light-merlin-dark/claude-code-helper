@@ -14,11 +14,12 @@ import { withProgress } from '../utils/progress';
 export interface AuditOptions {
   fix?: boolean;
   stats?: boolean;
+  showSecrets?: boolean;
   testMode?: boolean;
 }
 
 export async function audit(options: AuditOptions = {}): Promise<string> {
-  const { fix = false, stats = false, testMode = false } = options;
+  const { fix = false, stats = false, showSecrets = false, testMode = false } = options;
 
   try {
     // Read Claude configuration
@@ -42,6 +43,11 @@ export async function audit(options: AuditOptions = {}): Promise<string> {
     if (stats) {
       // Quick stats mode for AI agents
       return formatQuickStats(config, report);
+    }
+    
+    if (showSecrets) {
+      // Show detailed secret information
+      return formatSecretDetails(report);
     }
     
     // Return formatted report
@@ -122,8 +128,10 @@ function formatQuickStats(config: any, report: any): string {
   
   // Count issues
   const securityIssues = report.security.length;
+  const secretsFound = report.secrets.totalCount;
+  const highConfidenceSecrets = report.secrets.highConfidenceCount;
   const bloatIssues = report.bloat.totalPastes;
-  const totalIssues = securityIssues + (bloatIssues > 10 ? 1 : 0) + (configSize > 50 * 1024 * 1024 ? 1 : 0);
+  const totalIssues = securityIssues + (secretsFound > 0 ? 1 : 0) + (bloatIssues > 10 ? 1 : 0) + (configSize > 50 * 1024 * 1024 ? 1 : 0);
   
   // Performance assessment
   let performanceStatus = 'Good';
@@ -140,6 +148,15 @@ function formatQuickStats(config: any, report: any): string {
     `Performance: ${performanceStatus}`
   ];
   
+  // Priority: secrets first (most critical)
+  if (secretsFound > 0) {
+    if (highConfidenceSecrets > 0) {
+      stats.push(`🚨 Secrets: ${highConfidenceSecrets} high-confidence`);
+    } else {
+      stats.push(`🔍 Secrets: ${secretsFound} potential`);
+    }
+  }
+  
   if (securityIssues > 0) {
     stats.push(`Security: ${securityIssues} dangerous permissions`);
   }
@@ -148,7 +165,89 @@ function formatQuickStats(config: any, report: any): string {
     stats.push(`Bloat: ${bloatIssues} large pastes`);
   }
   
-  const recommendation = totalIssues > 0 ? 'Run "cch --clean-config" to optimize' : 'Config is healthy';
+  // Prioritized recommendations
+  let recommendation = 'Config is healthy';
+  if (highConfidenceSecrets > 0) {
+    recommendation = '🚨 URGENT: Run "cch --clean-config --mask-secrets" to secure secrets';
+  } else if (secretsFound > 0) {
+    recommendation = 'Run "cch --audit --show-secrets" to review potential secrets';
+  } else if (totalIssues > 0) {
+    recommendation = 'Run "cch --clean-config" to optimize';
+  }
   
   return `${stats.join(', ')} - ${recommendation}`;
+}
+
+function formatSecretDetails(report: any): string {
+  const lines: string[] = [];
+  
+  if (report.secrets.totalCount === 0) {
+    return '✅ No secrets detected in configuration';
+  }
+  
+  lines.push('🔐 DETECTED SECRETS REPORT');
+  lines.push('===============================');
+  lines.push('');
+  lines.push(`Total secrets found: ${report.secrets.totalCount}`);
+  lines.push(`High confidence: ${report.secrets.highConfidenceCount}`);
+  lines.push(`Medium/Low confidence: ${report.secrets.totalCount - report.secrets.highConfidenceCount}`);
+  lines.push('');
+  
+  // Group secrets by confidence level
+  const highConfidence = report.secrets.secrets.filter((s: any) => s.confidence === 'high');
+  const mediumConfidence = report.secrets.secrets.filter((s: any) => s.confidence === 'medium');
+  const lowConfidence = report.secrets.secrets.filter((s: any) => s.confidence === 'low');
+  
+  if (highConfidence.length > 0) {
+    lines.push('🚨 HIGH CONFIDENCE SECRETS (Immediate Action Required):');
+    lines.push('───────────────────────────────────────────────────────');
+    highConfidence.forEach((secret: any, index: number) => {
+      lines.push(`${index + 1}. ${secret.type}`);
+      lines.push(`   Location: ${secret.location}`);
+      lines.push(`   Value: ${secret.maskedValue}`);
+      lines.push(`   Context: ${secret.context.substring(0, 100)}...`);
+      lines.push('');
+    });
+  }
+  
+  if (mediumConfidence.length > 0) {
+    lines.push('⚠️  MEDIUM CONFIDENCE SECRETS (Review Recommended):');
+    lines.push('──────────────────────────────────────────────────');
+    mediumConfidence.slice(0, 5).forEach((secret: any, index: number) => {
+      lines.push(`${index + 1}. ${secret.type} in ${secret.location}`);
+      lines.push(`   Value: ${secret.maskedValue}`);
+      lines.push('');
+    });
+    if (mediumConfidence.length > 5) {
+      lines.push(`   ... and ${mediumConfidence.length - 5} more medium confidence secrets`);
+      lines.push('');
+    }
+  }
+  
+  if (lowConfidence.length > 0) {
+    lines.push('ℹ️  LOW CONFIDENCE SECRETS (May be false positives):');
+    lines.push('────────────────────────────────────────────────────');
+    const grouped = lowConfidence.reduce((acc: any, secret: any) => {
+      acc[secret.type] = (acc[secret.type] || 0) + 1;
+      return acc;
+    }, {});
+    
+    Object.entries(grouped).forEach(([type, count]) => {
+      lines.push(`   ${type}: ${count} instances`);
+    });
+    lines.push('');
+  }
+  
+  lines.push('RECOMMENDED ACTIONS:');
+  lines.push('──────────────────────');
+  if (highConfidence.length > 0) {
+    lines.push('• URGENT: Run "cch --clean-config --mask-secrets" to mask high-confidence secrets');
+  }
+  if (report.secrets.totalCount > 0) {
+    lines.push('• Create backup: "cch --backup-config -n pre-secret-cleanup"');
+    lines.push('• Review and manually verify any false positives');
+  }
+  lines.push('• Consider using environment variables for sensitive configuration');
+  
+  return lines.join('\n');
 }

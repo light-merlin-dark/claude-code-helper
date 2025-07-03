@@ -7,6 +7,7 @@ import fs from 'fs';
 import path from 'path';
 import { ClaudeConfig } from '../core/config';
 import { memoize } from '../utils/performance';
+import { SecretDetector, SecretScanResult } from './secret-detector';
 
 // Dangerous permission patterns
 export const DANGEROUS_PATTERNS = [
@@ -62,22 +63,27 @@ export interface AuditReport {
     totalPermissions: number;
   };
   security: SecurityIssue[];
+  secrets: SecretScanResult;
   bloat: ConfigBloat;
   tree: ProjectTreeNode;
   recommendations: string[];
 }
 
 export class Analyzer {
+  private secretDetector = new SecretDetector();
+
   async analyzeConfig(config: ClaudeConfig): Promise<AuditReport> {
     const overview = this.analyzeOverview(config);
     const security = this.findDangerousPermissions(config);
+    const secrets = this.secretDetector.scanConfig(config);
     const bloat = this.findConfigBloat(config);
     const tree = this.buildProjectTree(config);
-    const recommendations = this.generateRecommendations(security, bloat);
+    const recommendations = this.generateRecommendations(security, secrets, bloat);
 
     return {
       overview,
       security,
+      secrets,
       bloat,
       tree,
       recommendations
@@ -299,20 +305,32 @@ export class Analyzer {
     return count;
   }
 
-  private generateRecommendations(security: SecurityIssue[], bloat: ConfigBloat): string[] {
+  private generateRecommendations(security: SecurityIssue[], secrets: SecretScanResult, bloat: ConfigBloat): string[] {
     const recommendations: string[] = [];
 
+    if (secrets.totalCount > 0) {
+      if (secrets.highConfidenceCount > 0) {
+        recommendations.push(`🚨 URGENT: Mask ${secrets.highConfidenceCount} high-confidence secrets: cch --clean-config --mask-secrets`);
+      } else {
+        recommendations.push(`🔒 Review ${secrets.totalCount} potential secrets: cch --audit --show-secrets`);
+      }
+    }
+
     if (security.length > 0) {
-      recommendations.push(`Remove dangerous permissions: cch clean-dangerous`);
+      recommendations.push(`Remove dangerous permissions: cch --clean-dangerous`);
     }
 
     if (bloat.totalPastes > 0) {
       const sizeInMB = (bloat.totalSize / 1024 / 1024).toFixed(1);
       const topProjects = Array.from(bloat.projectSummaries.keys()).slice(0, 3).join(',');
-      recommendations.push(`Clean bloated history (${sizeInMB} MB): cch clean-history --projects ${topProjects}`);
+      recommendations.push(`Clean bloated history (${sizeInMB} MB): cch --clean-history --projects ${topProjects}`);
     }
 
-    recommendations.push(`Backup before changes: cch backup`);
+    if (secrets.totalCount > 0 || security.length > 0 || bloat.totalPastes > 5) {
+      recommendations.push(`Comprehensive cleanup: cch --clean-config`);
+    }
+
+    recommendations.push(`Backup before changes: cch --backup-config`);
 
     return recommendations;
   }
@@ -332,6 +350,28 @@ export class Analyzer {
     lines.push(`- MCP tools installed: ${report.overview.mcpToolsInstalled}`);
     lines.push(`- Total permissions: ${report.overview.totalPermissions}`);
     lines.push('');
+
+    // Secrets Detection
+    if (report.secrets.totalCount > 0) {
+      lines.push('🔐 SECRETS DETECTED:');
+      if (report.secrets.highConfidenceCount > 0) {
+        lines.push(`[CRITICAL] ${report.secrets.highConfidenceCount} high-confidence secrets found!`);
+      }
+      lines.push(`Total potential secrets: ${report.secrets.totalCount}`);
+      
+      Object.entries(report.secrets.categoryCounts).forEach(([category, count]) => {
+        const emoji = this.getCategoryEmoji(category);
+        lines.push(`  ${emoji} ${this.capitalizeCategory(category)}: ${count}`);
+      });
+      
+      if (report.secrets.highConfidenceCount > 0) {
+        lines.push('');
+        lines.push('⚠️  Immediate action recommended:');
+        lines.push('   Run "cch --clean-config --mask-secrets" to automatically mask secrets');
+        lines.push('   Or run "cch --audit --show-secrets" to review secrets manually');
+      }
+      lines.push('');
+    }
 
     // Security Issues
     if (report.security.length > 0) {
@@ -411,5 +451,24 @@ export class Analyzer {
     if (bytes < 1024) return `${bytes} B`;
     if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
     return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+  }
+
+  private getCategoryEmoji(category: string): string {
+    const emojis: Record<string, string> = {
+      'api-key': '🔑',
+      'token': '🎫',
+      'password': '🔒',
+      'credential': '🔐',
+      'personal': '👤',
+      'crypto': '🔑'
+    };
+    return emojis[category] || '🔍';
+  }
+
+  private capitalizeCategory(category: string): string {
+    return category
+      .split('-')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
   }
 }
