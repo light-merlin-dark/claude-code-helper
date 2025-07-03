@@ -28,6 +28,7 @@ import { runDoctor } from './commands/doctor';
 // Audit and clean commands
 import { audit } from './commands/audit';
 import { cleanHistory, cleanDangerous } from './commands/clean';
+import { cleanConfig } from './commands/config-clean';
 
 // Bulk operation commands
 import { bulkAddPermission, bulkRemovePermission, bulkAddTool, bulkRemoveTool } from './commands/bulk';
@@ -57,89 +58,128 @@ function generateHelpText(testMode: boolean = false): string {
   const baseCommandsPath = getBaseCommandsPath(testMode);
   const baseCommandsExist = fs.existsSync(baseCommandsPath);
   
-  let helpText = `Claude Code Helper - Manage permissions across your Claude Code projects
+  let helpText = `Claude Code Helper v${getVersion()} - AI-friendly CLI for Claude Code project management
 
-Usage: cch [options]
+QUICK START (for AI agents):
+  cch -lp                    List current permissions
+  cch --audit                Analyze config (security, bloat, performance)
+  cch --clean-config         Interactive config cleanup with size analysis
+  cch -add "docker"          Add permission (auto-expands to docker:*)
+  cch -ap                    Apply permissions to all projects
+
+AI AGENT EXAMPLES:
+  # Check config health and size
+  cch --audit --stats        # Quick stats: size, projects, issues
+  
+  # Clean bloated config (interactive with confirmation)
+  cch --clean-config         # Shows before/after, asks to proceed
+  cch --clean-config --force # Skip confirmation, use safe defaults
+  
+  # Backup before major changes
+  cch -bc -n "pre-cleanup"   # Named backup before cleanup
+  
+  # Fix specific issues
+  cch --clean-history --dry-run    # Preview large paste removal
+  cch --clean-dangerous            # Remove risky permissions
+  
+  # Bulk operations across projects
+  cch --add-perm "npm:*" --projects "work/*"    # Pattern matching
+  cch --remove-perm --dangerous --all           # Remove all dangerous
 
 `;
 
   if (!baseCommandsExist) {
-    helpText += `New user? Start by discovering your common permissions:
-  cch -dp                    # Discover frequently used permissions
+    helpText += `🚀 NEW USER? START HERE:
+  cch -dp                    Discover your common permissions
+  cch --audit                Check config health and size
 
 `;
   }
   
-  helpText += `Setup & Installation:
+  helpText += `📋 CORE COMMANDS:
+Setup:
   install                    Install CCH as MCP server in Claude Code
   uninstall                  Remove CCH MCP server from Claude Code
 
-Quick Start:
-  cch -lp                    # See your permissions
-  cch -add "docker"          # Add a permission (auto-expands to docker:*)
-  cch -ap                    # Apply permissions to all projects
-
-Managing Permissions:
+Permissions:
   -lp, --list-permissions    List your permissions
-  -dp, --discover            Discover frequently used permissions
-  -add, --add-permission     Add a permission (with smart expansion)
-  -rm, --remove-permission   Remove a permission by number
+  -dp, --discover            Discover frequently used permissions  
+  -add, --add-permission     Add permission (smart expansion: "docker" -> "docker:*")
+  -rm, --remove-permission   Remove permission by number
   -ap, --apply-permissions   Apply permissions to all projects
 
-Bulk Operations:
-  --add-perm <perm>          Add permission to multiple projects
-  --remove-perm <perm>       Remove permission from projects
-  --add-tool <tool>          Add MCP tool to multiple projects
-  --remove-tool <tool>       Remove MCP tool from projects
-  
-  Use with: --projects <pattern> or --all
-  Examples: --projects "work/*,personal/*" or --all
+Config Analysis & Cleanup:
+  --audit                    Full analysis: security, bloat, performance impact
+  --audit --fix              Interactive fix mode with confirmations
+  --audit --stats            Quick size/project stats
+  --clean-config             Smart config cleanup with before/after preview
+  --clean-config --force     Auto-cleanup with safe defaults (no prompts)
+  --clean-history            Remove large pastes (100+ lines) from history
+  --clean-dangerous          Remove all dangerous permissions
 
 MCP Tools:
   -dmc, --discover-mcp       Discover frequently used MCP tools
   -rmc, --reload-mcp         Reload MCP configuration from claude CLI
 
-Configuration:
-  -c, --config               View current configuration and file paths
-  --changelog                View recent changes
-  --doctor                   Diagnose and fix configuration issues
-  --audit                    Comprehensive config analysis (security, bloat, etc.)
-  --audit --fix              Interactively fix issues found by audit
-
 Backup & Restore:
-  -bc, --backup-config       Create a backup of Claude config
-  -rc, --restore-config      Restore from a backup
-  -n, --name <name>          Name your backup (use with -bc/-rc)
+  -bc, --backup-config       Create backup (auto-timestamped or named)
+  -rc, --restore-config      Restore from backup
+  -n, --name <name>          Name your backup/restore
 
-Cleanup:
+Bulk Operations:
+  --add-perm <perm>          Add permission to multiple projects
+  --remove-perm <perm>       Remove permission from projects  
+  --add-tool <tool>          Add MCP tool to multiple projects
+  --remove-tool <tool>       Remove MCP tool from projects
+  
+  Target Selection:
+  --projects <pattern>       Project patterns: "work/*", "api-*", "work/*,test/*"
+  --all                      All projects
+  --dangerous                Target dangerous permissions only
+
+Utilities:
+  -c, --config               View config paths and current state
+  --changelog                Recent changes
+  --doctor                   Diagnose and fix issues
   -dd, --delete-data         Delete all CCH data (with confirmation)
-  --clean-history            Remove large pastes from conversation history
-  --clean-dangerous          Remove all dangerous permissions
 
-Options:
-  --test                     Preview changes without applying
+🛠️ OPTIONS:
+  --test, --dry-run          Preview changes without applying
   -f, --force                Skip confirmation prompts
+  --stats                    Show size/performance statistics
+  -v, --version              Show version
 
-Configuration Locations:
+📁 FILE LOCATIONS:
   Permissions:   ~/.cch/permissions.json
-  Preferences:   ~/.cch/preferences.json
+  Preferences:   ~/.cch/preferences.json  
   Claude Config: ~/.claude.json (managed by Claude)
   Backups:       ~/.cch/backups/
 
-Examples:
-  cch -lp                    # Start here - see your permissions
-  cch -add "pytest"          # Add pytest (auto-expands to pytest:*)
-  cch -ap --test             # Preview what will change
-  cch -ap                    # Apply changes
-  cch -bc -n before-update   # Create a named backup
+💡 INTELLIGENT EXAMPLES:
+Config Health Check:
+  cch --audit --stats        # "Config: 45MB, 12 projects, 3 issues found"
   
-Bulk Examples:
-  cch --add-perm "npm:*" --projects "work/*"       # Add to work projects
-  cch --remove-perm --dangerous --all              # Remove dangerous perms
-  cch --add-tool github --projects "*-api"         # Add to API projects
+Config Cleanup Workflow:
+  cch --clean-config         # Shows: "Current: 45MB → After: 8MB (83% reduction)"
+                            # "Remove 847 large pastes from 8 projects? [Y/n]"
 
-View recent changes:
-  cch --changelog`;
+Permission Management:
+  cch -lp                    # See numbered list
+  cch -add "pytest"          # Auto-expands to "pytest:*"
+  cch -rm 3                  # Remove permission #3
+  cch -ap --test            # Preview changes: "Will add to 5 projects"
+
+Bulk Operations:
+  cch --add-perm "npm:*" --projects "work/*"       # Add npm to work projects
+  cch --remove-perm --dangerous --all              # Security cleanup
+  cch --add-tool github --projects "*-api"         # Add GitHub to API projects
+
+Emergency Cleanup:
+  cch --clean-config --force                       # Auto-cleanup, no prompts
+  cch --clean-dangerous --force                    # Remove all risky permissions
+
+View Status:
+  cch --changelog           # Recent activity log`;
   
   return helpText;
 }
@@ -185,6 +225,7 @@ export async function handleCLI(args: string[]): Promise<void> {
     
     // Audit and clean commands
     'audit': audit_,
+    'clean-config': cleanConfig_,
     'clean-history': cleanHistory_,
     'clean-dangerous': cleanDangerous_,
     
@@ -219,7 +260,7 @@ export async function handleCLI(args: string[]): Promise<void> {
                        !listPermissions_ && !lp && !discoverPermissions_ && !discover_ && !dp &&
                        !addPermission_ && !add_ && !add && !removePermission_ && !remove_ && !rm &&
                        !applyPermissions_ && !ap && !discoverMcp_ && !dmc && !reloadMcp_ && !rmc &&
-                       !audit_ && !cleanHistory_ && !cleanDangerous_ &&
+                       !audit_ && !cleanConfig_ && !cleanHistory_ && !cleanDangerous_ &&
                        !addPerm_ && !removePerm_ && !addTool_ && !removeTool_ && 
                        command !== 'install' && command !== 'uninstall';
     
@@ -246,6 +287,7 @@ export async function handleCLI(args: string[]): Promise<void> {
     
     // Audit and clean commands
     const isAudit = audit_;
+    const isCleanConfig = cleanConfig_;
     const isCleanHistory = cleanHistory_;
     const isCleanDangerous = cleanDangerous_;
     
@@ -347,8 +389,29 @@ export async function handleCLI(args: string[]): Promise<void> {
       await runDoctor(undefined, testMode);
     } else if (isAudit) {
       const fixMode = options.fix || false;
-      const result = await audit({ fix: fixMode, testMode });
+      const statsMode = options.stats || false;
+      const result = await audit({ fix: fixMode, stats: statsMode, testMode });
       console.log(result);
+    } else if (isCleanConfig) {
+      const aggressive = options.aggressive || false;
+      const dryRun = options['dry-run'] || false;
+      const result = await cleanConfig({
+        force: isForce,
+        testMode,
+        dryRun,
+        aggressive
+      });
+      
+      if (!dryRun && (result.pastesRemoved > 0 || result.permissionsRemoved > 0)) {
+        console.log(`\n✓ Cleanup completed successfully!`);
+        console.log(`  Pastes removed: ${result.pastesRemoved}`);
+        console.log(`  Permissions removed: ${result.permissionsRemoved}`);
+        console.log(`  Projects modified: ${result.projectsModified}`);
+        console.log(`  Size saved: ${(result.sizeReduction / 1024 / 1024).toFixed(1)} MB`);
+        if (result.backupPath) {
+          console.log(`  Backup: ${result.backupPath}`);
+        }
+      }
     } else if (isCleanHistory) {
       const projects = options.projects as string | undefined;
       const dryRun = options['dry-run'] || false;

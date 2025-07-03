@@ -13,11 +13,12 @@ import { withProgress } from '../utils/progress';
 
 export interface AuditOptions {
   fix?: boolean;
+  stats?: boolean;
   testMode?: boolean;
 }
 
 export async function audit(options: AuditOptions = {}): Promise<string> {
-  const { fix = false, testMode = false } = options;
+  const { fix = false, stats = false, testMode = false } = options;
 
   try {
     // Read Claude configuration
@@ -36,6 +37,11 @@ export async function audit(options: AuditOptions = {}): Promise<string> {
     if (fix) {
       // Interactive fix mode
       return await interactiveFix(report, testMode);
+    }
+    
+    if (stats) {
+      // Quick stats mode for AI agents
+      return formatQuickStats(config, report);
     }
     
     // Return formatted report
@@ -107,4 +113,42 @@ async function interactiveFix(report: any, testMode: boolean): Promise<string> {
   results.forEach(result => console.log(`  ${result}`));
   
   return results.join('\n');
+}
+
+function formatQuickStats(config: any, report: any): string {
+  const configSize = Buffer.byteLength(JSON.stringify(config), 'utf8');
+  const sizeMB = (configSize / 1024 / 1024).toFixed(1);
+  const projectCount = Object.keys(config.projects || {}).length;
+  
+  // Count issues
+  const securityIssues = report.security.length;
+  const bloatIssues = report.bloat.totalPastes;
+  const totalIssues = securityIssues + (bloatIssues > 10 ? 1 : 0) + (configSize > 50 * 1024 * 1024 ? 1 : 0);
+  
+  // Performance assessment
+  let performanceStatus = 'Good';
+  if (configSize > 100 * 1024 * 1024) {
+    performanceStatus = 'Poor';
+  } else if (configSize > 50 * 1024 * 1024) {
+    performanceStatus = 'Degraded';
+  }
+  
+  const stats = [
+    `Config: ${sizeMB}MB`,
+    `Projects: ${projectCount}`,
+    `Issues: ${totalIssues}`,
+    `Performance: ${performanceStatus}`
+  ];
+  
+  if (securityIssues > 0) {
+    stats.push(`Security: ${securityIssues} dangerous permissions`);
+  }
+  
+  if (bloatIssues > 10) {
+    stats.push(`Bloat: ${bloatIssues} large pastes`);
+  }
+  
+  const recommendation = totalIssues > 0 ? 'Run "cch --clean-config" to optimize' : 'Config is healthy';
+  
+  return `${stats.join(', ')} - ${recommendation}`;
 }

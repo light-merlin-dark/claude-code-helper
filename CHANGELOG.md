@@ -2,6 +2,30 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.3.5] - 2025-07-02
+
+### 🧹 AI-Friendly Config Cleanup
+
+### Added
+- **Comprehensive Config Cleanup**: New `--clean-config` command with analysis, confirmation, and before/after stats
+- **AI-Optimized Help Text**: Redesigned CLI help with "Quick Start" and "AI Agent Examples" sections
+- **Quick Stats Mode**: Added `--audit --stats` for one-line config health summaries
+- **Visual Size Analysis**: Progress bars showing current vs. projected config sizes
+- **Force Mode**: `--clean-config --force` for automated cleanup without prompts
+- **Aggressive Cleanup**: `--aggressive` flag for thorough optimization
+
+### Enhanced
+- **Two-Step Cleanup Process**: Analysis → Confirmation → Cleanup with clear impact preview
+- **Smart Recommendations**: Specific cleanup actions with size reduction estimates
+- **Developer-Friendly Output**: Shows exact space savings and items cleaned
+- **Safety Features**: Always creates compressed backups before cleanup operations
+
+### Technical
+- New `src/commands/config-clean.ts` with comprehensive cleanup engine
+- Enhanced audit command with quick stats formatting for AI agents
+- Improved CLI help text optimization for both human and AI users
+- Added visual progress indicators and size calculation algorithms
+
 ## [2.3.4] - 2025-06-23
 
 ### 📚 README Modernization
