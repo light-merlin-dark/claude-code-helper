@@ -2,6 +2,47 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.4.0] - 2025-08-23
+
+### 🧹 Unified Clean Command System
+
+### Added
+- **New `cch clean` Command System**: Modular, safe cleanup with dry-run by default
+  - `cch clean` - Smart general cleanup (large pastes, dangerous permissions)
+  - `cch clean projects` - Remove empty or accidental projects
+  - `cch clean history` - Clear ALL conversation history (nuclear option)
+  - `cch clean help` - Comprehensive help for clean commands
+- **Dry-Run First Safety**: All clean commands preview changes before execution
+- **Smart Detection**: Automatically suggests relevant cleanup options based on config analysis
+- **Size-Based Cleanup**: Focuses on content size rather than line count, catching base64 images
+- **History Trimming**: Automatically trim projects with 50+ entries to recent 30
+- **Aggressive Mode**: `--aggressive` flag for more thorough cleanup (10KB threshold vs 50KB)
+
+### Changed
+- **Execute Flag Required**: All clean commands require `--execute` or `-e` to perform changes
+- **Smart Thresholds**: 50KB default (catches images), 10KB aggressive mode
+- **Better UX**: Clear reporting of what will be cleaned and why
+- **Unified Interface**: Replaced scattered clean commands with cohesive system
+
+### Enhanced
+- **99.4% Size Reduction**: Successfully reduced config from 14MB to 84KB in testing
+- **Image Detection**: Properly identifies and removes base64-encoded images
+- **Project Cleanup**: Identifies empty projects and minimal activity projects
+- **Safety Features**: Automatic backups before any changes
+- **AI-Friendly**: Clear, structured output perfect for AI agents
+
+### Technical
+- New `src/commands/clean-unified.ts` with comprehensive cleanup engine
+- Smart analysis with recommendations for additional cleanup
+- Efficient handling of large configs with streaming JSON processing
+
+## [2.3.7] - 2025-07-02
+
+### 🔧 Package Configuration Update
+
+### Fixed
+- Updated package.json version to match published release
+
 ## [2.3.6] - 2025-07-02
 
 ### 🚨 Critical Security: Always-On Secret Detection

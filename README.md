@@ -2,37 +2,108 @@
 
 <div align="center">
   <img src="assets/terminal-preview.png" alt="Claude Code Helper Terminal Preview" width="700">
-  <p><em>Streamline your Claude Code workflow with intelligent MCP management</em></p>
+  <p><em>Swiss Army knife for Claude Code configuration management</em></p>
 </div>
 
-**MCP configuration management for Claude Code - discover tools, manage permissions, and diagnose issues across all your projects.**
+**A versatile CLI-first tool that can be used as either a CLI or MCP server for swift management of your Claude configuration file.**
 
-Native MCP server that gives AI agents direct access to manage configurations, analyze MCP tool usage, and maintain consistent bash permissions across your entire codebase.
+Tell Claude to run `cch` commands directly - it just works! Every command is **dry-run by default** for safety.
 
-## 🚀 Key Capabilities
+## 🎯 Why CCH?
+
+**🔧 CLI-First Design**: Simple commands that Claude can run directly. No MCP complexity required - just `cch clean` and you're done.
+
+**🛡️ Dry-Run by Default**: Every cleanup command shows you what will happen BEFORE making changes. Use `--execute` when ready.
+
+**🧹 Smart Cleanup**: Reduced configs from 14MB to 84KB (99.4% reduction). Focuses on removing images and large pastes intelligently.
 
 **🚨 Always-On Security**: Automatic secret detection on EVERY command with immediate one-command remediation.
 
-**🤖 AI-Native Design**: First-class MCP server with 15+ tools for configuration management, diagnostics, and bulk operations.
+**📊 Config Intelligence**: Analyzes your entire Claude Code workspace, discovering patterns and suggesting optimizations.
 
-**🛡️ Smart Safety**: Prevents dangerous commands, validates permissions, masks exposed secrets, and creates automatic backups.
+## 🚀 Quick Start
 
-**📊 Global Intelligence**: Analyzes your entire Claude Code workspace via global config, discovering usage patterns across all projects.
-
-**⚡ Bulk Operations**: Manage permissions and MCP tools across multiple projects with pattern matching and dry-run previews.
-
-## 🔌 Model Context Protocol (MCP) Setup
-
-### Quick Start
 ```bash
 # Install globally
 npm install -g @light-merlin-dark/claude-code-helper
 
-# Install MCP server in Claude Code
-cch install
+# Clean your bloated config (dry-run by default!)
+cch clean                  # Preview what will be removed
+cch clean --execute        # Actually perform cleanup
+
+# Remove empty projects
+cch clean projects         # Preview first
+cch clean projects -e      # Then execute
+
+# Nuclear option - clear all history
+cch clean history          # See what would be cleared
+cch clean history -e       # Execute if needed
 ```
 
-That's it! Restart Claude Code and you're ready to go.
+## Key Features
+
+**✨ Unified Clean Command**: Smart, modular cleanup system
+- `cch clean` - Remove large pastes, images, dangerous permissions
+- `cch clean projects` - Remove empty or accidental projects  
+- `cch clean history` - Clear all conversation history
+- Always shows preview first, requires `--execute` to run
+
+**🤖 Works Both Ways**: Use as CLI or MCP
+- **CLI Mode**: Tell Claude to run `cch` commands directly
+- **MCP Mode**: Install as MCP server for advanced integrations
+- Most users only need the CLI - MCP is optional!
+
+## 📦 Installation
+
+```bash
+# Install globally
+npm install -g @light-merlin-dark/claude-code-helper
+
+# That's it! Start using CLI commands immediately
+cch clean              # Preview config cleanup
+cch --audit            # Analyze configuration
+```
+
+## 🎮 CLI Usage (Recommended)
+
+Just tell Claude to run these commands - no MCP setup needed!
+
+### Essential Commands
+
+```bash
+# Clean Commands (all dry-run by default!)
+cch clean              # Smart cleanup - removes images, large pastes
+cch clean projects     # Remove empty/accidental projects
+cch clean history      # Clear all conversation history
+cch clean help         # See all options
+
+# Always add --execute or -e to actually run:
+cch clean -e           # Execute after preview
+
+# Security & Health
+cch --audit            # Full config analysis with secret detection
+cch --mask-secrets-now # Emergency secret masking
+
+# Permission Management  
+cch -lp                # List current permissions
+cch -add "docker"      # Add permission (auto-expands to docker:*)
+cch -ap                # Apply permissions to all projects
+```
+
+### Why CLI First?
+
+- **Simple**: Claude runs commands directly - no complex setup
+- **Safe**: Every command previews changes before making them
+- **Fast**: Instant results without MCP overhead
+- **Clear**: See exactly what will happen before it does
+
+## 🔌 Optional: MCP Setup (Advanced)
+
+For power users who want MCP integration:
+
+```bash
+cch install            # Install as MCP server in Claude Code
+```
 
 ### Available MCP Tools
 
@@ -144,80 +215,34 @@ Ask Claude to help with your setup:
 "Clean up dangerous permissions across all projects"
 ```
 
-## ✨ Key Features
+## 🛡️ Safety Features
 
-### 🤖 MCP-Powered Intelligence
-```json
-{
-  "tool": "discover-mcp-tools",
-  "minProjectCount": 3,
-  "includeStats": true
-}
-```
-
-Returns frequently used MCP tools across your projects:
-```
-🔍 MCP Tools Used in 3+ Projects
-
-1. mcp__github__search_code
-   • MCP: github
-   • Tool: search_code
-   • Used in 5 projects: api-server, frontend, cli-tool (+2 more)
-   • Total usage count: 127
-
-2. mcp__aia__consult
-   • MCP: aia
-   • Tool: consult
-   • Used in 4 projects: backend, ml-service, data-pipeline (+1 more)
-   • Total usage count: 89
-```
-
-### 🛡️ Enterprise-Ready Safety
 - **Always-On Secret Detection**: Automatic scanning on EVERY command execution
-- **Emergency Response**: `cch --mask-secrets-now` for immediate remediation
+- **Dry-Run by Default**: All clean commands preview before changing anything
+- **Emergency Response**: `cch --mask-secrets-now` for immediate secret remediation
 - **Blocked Commands**: Prevents `rm -rf /`, fork bombs, disk formatting
-- **Warning System**: Confirms risky operations before execution
+- **Automatic Backups**: Creates backups before any changes
 - **Smart Expansion**: `docker` → `docker:*` automatically
-- **Audit Trail**: Detailed change tracking for compliance
 
-### 📊 Project Analytics
+## 📊 Advanced Features
+
+### Permission Management
+- Discover frequently used permissions across projects
+- Apply permissions to multiple projects with patterns
+- Smart command expansion (`docker` → `docker:*`)
+- Bulk operations with dry-run previews
+
+### Configuration Analysis
 - MCP tool frequency analysis across all projects
 - Permission usage patterns and recommendations
-- Configuration health monitoring
+- Configuration health monitoring with `--audit`
 - Cross-project statistics and insights
 
-## 📦 Installation
-
+### Backup & Recovery
 ```bash
-# Install globally via npm
-npm install -g @light-merlin-dark/claude-code-helper
-
-# Or use npx (no installation required)
-npx @light-merlin-dark/claude-code-helper --help
-```
-
-## 🚀 CLI Quick Start
-
-```bash
-# Security & Config Health
-cch --audit                # Full security/config analysis (includes secrets)
-cch --mask-secrets-now     # EMERGENCY: Immediate secret masking
-cch --clean-config         # Interactive config cleanup with analysis
-
-# Permission Management
-cch -lp                    # List permissions
-cch -add docker            # Add with smart expansion (docker:*)
-cch -dp                    # Discover frequent permissions
-cch -ap                    # Apply to all projects
-
-# MCP Tool Discovery
-cch -dmc                   # Find MCP tools used in 3+ projects
-cch -rmc aia               # Reload specific MCP
-cch --doctor               # Run diagnostics
-
-# Safety & Backup
-cch -bc --name pre-update  # Create backup
-cch -rc --name pre-update  # Restore backup
+cch -bc --name pre-update  # Create backup before changes
+cch -rc --name pre-update  # Restore from backup
+cch --config               # View current configuration
 ```
 
 ### Command Reference

@@ -15,7 +15,7 @@ import { SecretDetector } from '../services/secret-detector';
 export interface ConfigCleanOptions {
   force?: boolean;
   testMode?: boolean;
-  dryRun?: boolean;
+  execute?: boolean;  // Changed from dryRun to execute (inverse logic)
   aggressive?: boolean;
   maskSecrets?: boolean;
   showSecrets?: boolean;
@@ -50,7 +50,15 @@ export interface CleanupResult {
  * Main config cleanup command with analysis and confirmation
  */
 export async function cleanConfig(options: ConfigCleanOptions = {}): Promise<CleanupResult> {
-  const { force = false, testMode = false, dryRun = false, aggressive = false, maskSecrets = false, showSecrets = false } = options;
+  const { force = false, testMode = false, execute = false, aggressive = false, maskSecrets = false, showSecrets = false } = options;
+  
+  // Default is dry-run mode unless --execute is passed
+  const dryRun = !execute;
+  
+  // Debug: Show mode
+  if (process.env.DEBUG) {
+    console.log(chalk.gray(`[DEBUG] execute=${execute}, dryRun=${dryRun}, force=${force}`));
+  }
   
   console.log(chalk.blue('🔍 Analyzing Claude configuration...'));
   console.log('');
@@ -62,7 +70,7 @@ export async function cleanConfig(options: ConfigCleanOptions = {}): Promise<Cle
   // Step 2: Show analysis results
   displayAnalysis(analysis);
   
-  // Step 3: Get user confirmation (unless forced)
+  // Step 3: Get user confirmation (only for execute mode without force)
   if (!force && !dryRun) {
     const proceed = await promptConfirm(
       `Proceed with cleanup? This will ${analysis.estimatedReductionPercent >= 50 ? 'significantly' : 'moderately'} reduce your config size.`,
@@ -114,20 +122,33 @@ async function analyzeConfigForCleanup(config: ClaudeConfig, aggressive: boolean
   // Count items that would be cleaned
   let largePastesCount = 0;
   let estimatedPasteReduction = 0;
+  let historyReduction = 0;
   
   Object.values(config.projects || {}).forEach(project => {
     if (project && project.history) {
+      // Check if history is too long (50+ entries is getting excessive)
+      // We'll trim to keep the most recent 30 entries
+      if (project.history.length >= 50) {
+        const keepEntries = 30;
+        const entriesToRemove = project.history.length - keepEntries;
+        // Estimate size reduction from removing old history
+        const oldEntries = project.history.slice(0, entriesToRemove);
+        historyReduction += Buffer.byteLength(JSON.stringify(oldEntries), 'utf8');
+      }
+      
       project.history.forEach(entry => {
         if (entry.pastedContents) {
           Object.values(entry.pastedContents).forEach((paste: any) => {
             const content = paste.content || '';
-            const lines = content.split('\n').length;
             const size = Buffer.byteLength(content, 'utf8');
             
-            // Conservative: 100+ lines, Aggressive: 50+ lines or 2KB+
-            const threshold = aggressive ? { lines: 50, size: 2048 } : { lines: 100, size: 5120 };
+            // Smart detection: Focus on truly large content
+            // Images are usually > 50KB, large text blocks > 10KB
+            // Conservative: 50KB+ for any content
+            // Aggressive: 10KB+ for any content
+            const sizeThreshold = aggressive ? 10240 : 51200; // 10KB or 50KB
             
-            if (lines >= threshold.lines || size >= threshold.size) {
+            if (size >= sizeThreshold) {
               largePastesCount++;
               estimatedPasteReduction += size;
             }
@@ -145,8 +166,9 @@ async function analyzeConfigForCleanup(config: ClaudeConfig, aggressive: boolean
   const highConfidenceSecrets = report.secrets.highConfidenceCount;
   
   // Estimate size after cleanup
+  const totalReduction = estimatedPasteReduction + historyReduction;
   const estimatedSizeAfter = Math.max(
-    currentSizeBytes - estimatedPasteReduction,
+    currentSizeBytes - totalReduction,
     currentSizeBytes * 0.1 // Never estimate less than 10% of original
   );
   const estimatedReduction = currentSizeBytes - estimatedSizeAfter;
@@ -160,7 +182,13 @@ async function analyzeConfigForCleanup(config: ClaudeConfig, aggressive: boolean
     recommendations.push(`🔍 Review ${secretsFound} potential secrets for security`);
   }
   if (largePastesCount > 0) {
-    recommendations.push(`Remove ${largePastesCount} large pastes to save ~${(estimatedPasteReduction / 1024 / 1024).toFixed(1)}MB`);
+    recommendations.push(`Remove ${largePastesCount} large pastes (mostly images) to save ~${(estimatedPasteReduction / 1024 / 1024).toFixed(1)}MB`);
+  }
+  if (historyReduction > 0) {
+    const projectsWithLongHistory = Object.values(config.projects || {}).filter(p => 
+      p && p.history && p.history.length >= 50
+    ).length;
+    recommendations.push(`Trim old history from ${projectsWithLongHistory} projects to save ~${(historyReduction / 1024 / 1024).toFixed(1)}MB`);
   }
   if (dangerousPermissions > 0) {
     recommendations.push(`Remove ${dangerousPermissions} dangerous permissions for security`);
@@ -262,6 +290,15 @@ async function performCleanup(
   Object.entries(config.projects || {}).forEach(([projectName, project]) => {
     let projectModified = false;
     
+    // Trim excessively long history (keep most recent 30 entries for projects with 50+)
+    if (project && project.history && project.history.length >= 50) {
+      if (!dryRun) {
+        // Keep the most recent 30 entries
+        project.history = project.history.slice(-30);
+        projectModified = true;
+      }
+    }
+    
     // Clean history pastes
     if (project && project.history) {
       project.history = project.history.map(entry => {
@@ -271,13 +308,15 @@ async function performCleanup(
           
           Object.entries(entry.pastedContents).forEach(([id, paste]: [string, any]) => {
             const content = paste.content || '';
-            const lines = content.split('\n').length;
             const size = Buffer.byteLength(content, 'utf8');
             
-            // Conservative: 100+ lines, Aggressive: 50+ lines or 2KB+
-            const threshold = aggressive ? { lines: 50, size: 2048 } : { lines: 100, size: 5120 };
+            // Smart detection: Focus on truly large content
+            // Images are usually > 50KB, large text blocks > 10KB
+            // Conservative: 50KB+ for any content (catches most images)
+            // Aggressive: 10KB+ for any content (catches large text too)
+            const sizeThreshold = aggressive ? 10240 : 51200; // 10KB or 50KB
             
-            if (lines >= threshold.lines || size >= threshold.size) {
+            if (size >= sizeThreshold) {
               if (!dryRun) {
                 // Remove the paste
                 entryModified = true;
@@ -358,7 +397,7 @@ async function performCleanup(
  */
 function displayResults(analysis: CleanupAnalysis, result: CleanupResult, dryRun: boolean): void {
   console.log('');
-  console.log(chalk.bold(dryRun ? '🔍 Cleanup Preview' : '✅ Cleanup Complete'));
+  console.log(chalk.bold(dryRun ? '🔍 Cleanup Preview (Dry Run)' : '✅ Cleanup Complete'));
   console.log('');
   
   if (result.pastesRemoved > 0) {
@@ -396,7 +435,7 @@ function displayResults(analysis: CleanupAnalysis, result: CleanupResult, dryRun
     }
   } else if (dryRun) {
     console.log('');
-    console.log(chalk.blue('Run without --dry-run to perform actual cleanup.'));
+    console.log(chalk.blue('To perform actual cleanup, run: cch --clean-config --execute'));
   } else {
     console.log('');
     console.log(chalk.green('✨ Config is already clean!'));

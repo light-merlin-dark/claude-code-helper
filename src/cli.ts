@@ -27,8 +27,9 @@ import { runDoctor } from './commands/doctor';
 
 // Audit and clean commands
 import { audit } from './commands/audit';
-import { cleanHistory, cleanDangerous } from './commands/clean';
+import { cleanHistory as cleanHistoryOld, cleanDangerous } from './commands/clean';
 import { cleanConfig } from './commands/config-clean';
+import { cleanGeneral, cleanProjects, cleanHistory } from './commands/clean-unified';
 
 // Bulk operation commands
 import { bulkAddPermission, bulkRemovePermission, bulkAddTool, bulkRemoveTool } from './commands/bulk';
@@ -57,6 +58,54 @@ function getVersion(): string {
   }
 }
 
+function generateCleanHelp(): string {
+  return `Claude Code Helper - Clean Command
+
+OVERVIEW:
+  The clean command helps maintain a lean and efficient Claude config.
+  All clean commands default to dry-run mode for safety.
+
+USAGE:
+  cch clean [subcommand] [options]
+
+COMMANDS:
+  cch clean                  General cleanup (large pastes, dangerous permissions)
+  cch clean projects         Remove empty or accidental projects
+  cch clean history          Clear ALL conversation history (use with caution!)
+  cch clean help             Show this help message
+
+OPTIONS:
+  --execute, -e              Actually perform the cleanup (default is dry-run)
+  --force                    Skip confirmation prompts
+  --aggressive               More aggressive cleanup thresholds
+
+EXAMPLES:
+  # Preview what would be cleaned (safe, no changes made)
+  cch clean                  
+  
+  # Execute general cleanup after reviewing dry-run
+  cch clean --execute        
+  
+  # Remove empty projects
+  cch clean projects         # Preview first
+  cch clean projects -e      # Then execute
+  
+  # Clear all history (destructive!)
+  cch clean history          # Preview what would be cleared
+  cch clean history -e       # Execute after careful consideration
+
+SAFETY:
+  • All commands show a preview by default (dry-run)
+  • Backups are automatically created before any changes
+  • Use --execute or -e to actually perform cleanup
+  
+SMART RECOMMENDATIONS:
+  The general 'cch clean' command will analyze your config and suggest:
+  • 'cch clean projects' if empty projects are found
+  • 'cch clean history' if config is very large (>5MB or 500+ entries)
+`;
+}
+
 function generateHelpText(testMode: boolean = false): string {
   const baseCommandsPath = getBaseCommandsPath(testMode);
   const baseCommandsExist = fs.existsSync(baseCommandsPath);
@@ -66,7 +115,7 @@ function generateHelpText(testMode: boolean = false): string {
 QUICK START (for AI agents):
   cch -lp                    List current permissions
   cch --audit                Analyze config (security, bloat, performance)
-  cch --clean-config         Interactive config cleanup with size analysis
+  cch clean                  Smart config cleanup (dry-run by default)
   cch -add "docker"          Add permission (auto-expands to docker:*)
   cch -ap                    Apply permissions to all projects
 
@@ -79,9 +128,11 @@ AI AGENT EXAMPLES:
   cch --mask-secrets-now     # EMERGENCY: Immediate secret masking (force)
   cch --clean-config --mask-secrets  # Auto-mask secrets with backup
   
-  # Clean bloated config (interactive with confirmation)
-  cch --clean-config         # Shows before/after, asks to proceed
-  cch --clean-config --force # Skip confirmation, use safe defaults
+  # Clean bloated config (dry-run by default, safe!)
+  cch clean                  # Smart general cleanup preview
+  cch clean -e               # Execute after reviewing
+  cch clean projects         # Remove empty projects
+  cch clean history          # Clear all history (careful!)
   
   # Backup before major changes
   cch -bc -n "pre-cleanup"   # Named backup before cleanup
@@ -121,9 +172,10 @@ Config Analysis & Cleanup:
   --audit --fix              Interactive fix mode with confirmations
   --audit --stats            Quick size/project stats
   --audit --show-secrets     Display detailed secret detection report
-  --clean-config             Smart config cleanup with before/after preview
-  --clean-config --force     Auto-cleanup with safe defaults (no prompts)
-  --clean-config --mask-secrets  Automatically mask detected secrets
+  --clean-config             Preview cleanup (dry-run by default, safe!)
+  --clean-config -e          Execute the cleanup after preview
+  --clean-config -e --force  Execute without confirmation prompts
+  --clean-config --mask-secrets  Include secret masking in cleanup
   --mask-secrets-now         🚨 EMERGENCY: Immediate secret masking (force mode)
   --clean-history            Remove large pastes (100+ lines) from history
   --clean-dangerous          Remove all dangerous permissions
@@ -176,8 +228,8 @@ Secret Detection:
   cch --clean-config --mask-secrets # "Masked 8 secrets, saved backup"
   
 Config Cleanup Workflow:
-  cch --clean-config         # Shows: "Current: 45MB → After: 8MB (83% reduction)"
-                            # "🚨 Secrets: 2 high-confidence, Remove 847 large pastes? [Y/n]"
+  cch --clean-config         # Shows preview (dry-run by default)
+  cch --clean-config -e      # Execute the cleanup (after reviewing dry-run)
 
 Permission Management:
   cch -lp                    # See numbered list
@@ -308,7 +360,11 @@ export async function handleCLI(args: string[]): Promise<void> {
     const isInstall = command === 'install';
     const isUninstall = command === 'uninstall';
     
-    // Audit and clean commands
+    // New unified clean command
+    const isClean = command === 'clean';
+    const cleanSubcommand = args[1]; // Get subcommand like 'projects' or 'history'
+    
+    // Legacy clean commands (for backward compatibility)
     const isAudit = audit_;
     const isCleanConfig = cleanConfig_;
     const isMaskSecretsNow = maskSecretsNow_;
@@ -419,19 +475,19 @@ export async function handleCLI(args: string[]): Promise<void> {
       console.log(result);
     } else if (isCleanConfig) {
       const aggressive = options.aggressive || false;
-      const dryRun = options['dry-run'] || false;
+      const execute = options.execute || options.e || false;  // Support both --execute and -e
       const maskSecrets = options['mask-secrets'] || false;
       const showSecrets = options['show-secrets'] || false;
       const result = await cleanConfig({
         force: isForce,
         testMode,
-        dryRun,
+        execute,  // Pass execute instead of dryRun
         aggressive,
         maskSecrets,
         showSecrets
       });
       
-      if (!dryRun && (result.pastesRemoved > 0 || result.permissionsRemoved > 0 || result.secretsMasked > 0)) {
+      if (execute && (result.pastesRemoved > 0 || result.permissionsRemoved > 0 || result.secretsMasked > 0)) {
         console.log(`\n✓ Cleanup completed successfully!`);
         if (result.pastesRemoved > 0) console.log(`  Pastes removed: ${result.pastesRemoved}`);
         if (result.permissionsRemoved > 0) console.log(`  Permissions removed: ${result.permissionsRemoved}`);
@@ -450,7 +506,7 @@ export async function handleCLI(args: string[]): Promise<void> {
       const result = await cleanConfig({
         force: true,
         testMode,
-        dryRun: false,
+        execute: true,  // Always execute for emergency masking
         aggressive: false,
         maskSecrets: true,
         showSecrets: false
@@ -475,7 +531,7 @@ export async function handleCLI(args: string[]): Promise<void> {
     } else if (isCleanHistory) {
       const projects = options.projects as string | undefined;
       const dryRun = options['dry-run'] || false;
-      const result = await cleanHistory({
+      const result = await cleanHistoryOld({
         projects: projects ? projects.split(',').map(p => p.trim()) : undefined,
         testMode,
         dryRun
@@ -579,6 +635,21 @@ export async function handleCLI(args: string[]): Promise<void> {
       }
     } else if (isDeleteData) {
       await cleanup.deleteData(testMode);
+    } else if (isClean) {
+      // New unified clean command
+      const execute = options.execute || options.e || false;
+      const aggressive = options.aggressive || false;
+      
+      if (cleanSubcommand === 'projects') {
+        await cleanProjects({ execute, force: isForce, testMode });
+      } else if (cleanSubcommand === 'history') {
+        await cleanHistory({ execute, force: isForce, testMode });
+      } else if (cleanSubcommand === 'help' || cleanSubcommand === '--help') {
+        console.log(generateCleanHelp());
+      } else {
+        // Default to general cleanup
+        await cleanGeneral({ execute, force: isForce, testMode, aggressive });
+      }
     } else if (isInstall) {
       await installToClaudeCode();
     } else if (isUninstall) {

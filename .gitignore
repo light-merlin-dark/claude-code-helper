@@ -33,7 +33,6 @@ yarn-error.log*
 
 # Environment variables
 .env
-.env.local
 .env.*.local
 
 # Personal Makefile
@@ -50,10 +49,20 @@ coverage/
 scripts/
 
 # Temporary files
-*.tmp
 *.temp
 
 # Package manager files
 package-lock.json
 yarn.lock
 pnpm-lock.yaml
+_blueprints
+*.test
+test.dry
+debug.test
+options.test
+dryrun.final
+final.dryrun.test
+blueprints
+chat.md
+.blueprints
+.chat.md
