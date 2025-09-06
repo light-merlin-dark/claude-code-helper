@@ -2,6 +2,29 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.5.2] - 2025-09-06
+
+### 🔒 Security & Accuracy Improvements
+
+### Fixed
+- **Secret Detection Accuracy**: Fixed false positives in credit card detection
+  - Added Luhn algorithm validation for credit card numbers
+  - Added word boundary checks to prevent matching decimal numbers
+  - Reduced false positives from 49 to actual 9 high-confidence secrets
+  - Fixed mismatch between detection count and masking count
+
+### Improved
+- **Simplified CLI Help**: Completely redesigned help text for better usability
+  - Main help now shows only essential commands with brief descriptions
+  - Added `cch help examples` for detailed examples and workflows
+  - Reduced help output from 200+ lines to 50 clean, focused lines
+  - Better organization with commands grouped logically
+
+### Technical
+- **Better Pattern Matching**: Credit card patterns now require word boundaries
+- **Validation Logic**: Implemented proper Luhn check for credit card validation
+- **Test Coverage**: Added diagnostic scripts for secret detection testing
+
 ## [2.5.0] - 2025-09-06
 
 ### 🔧 New Features

@@ -113,151 +113,182 @@ function generateHelpText(testMode: boolean = false): string {
   const baseCommandsPath = getBaseCommandsPath(testMode);
   const baseCommandsExist = fs.existsSync(baseCommandsPath);
   
-  let helpText = `Claude Code Helper v${getVersion()} - AI-friendly CLI for Claude Code project management
+  let helpText = `Claude Code Helper v${getVersion()}
 
-QUICK START (for AI agents):
-  cch -lp                    List current permissions
-  cch --audit                Analyze config (security, bloat, performance)
-  cch clean                  Smart config cleanup (dry-run by default)
-  cch -add "docker"          Add permission (auto-expands to docker:*)
+COMMANDS:
+  cch -lp                    List permissions
+  cch -add <permission>      Add permission (e.g., "docker" → docker:*)
+  cch -rm <number>           Remove permission by number
   cch -ap                    Apply permissions to all projects
+  cch -dp                    Discover common permissions
+  
+  cch clean                  Clean config (preview mode)
+  cch clean -e               Execute cleanup
+  cch clean projects         Remove empty projects
+  cch clean history          Clear all history
+  
+  cch --audit                Analyze config health
+  cch --audit --stats        Quick stats
+  cch --mask-secrets-now     Emergency secret masking
+  
+  cch -bc                    Backup config
+  cch -rc                    Restore from backup
+  cch fix-settings           Fix Claude settings
+  
+  cch install                Install as MCP server
+  cch uninstall              Remove MCP server
+  cch help                   Show this help
+  cch help examples          Show detailed examples
 
-AI AGENT EXAMPLES:
-  # Check config health and size (includes secret detection)
-  cch --audit --stats        # Quick stats: size, projects, issues, secrets
-  
-  # Secret detection and security
-  cch --audit --show-secrets # Detailed report of detected secrets
-  cch --mask-secrets-now     # EMERGENCY: Immediate secret masking (force)
-  cch --clean-config --mask-secrets  # Auto-mask secrets with backup
-  
-  # Clean bloated config (dry-run by default, safe!)
-  cch clean                  # Smart general cleanup preview
-  cch clean -e               # Execute after reviewing
-  cch clean projects         # Remove empty projects
-  cch clean history          # Clear all history (careful!)
-  
-  # Backup before major changes
-  cch -bc -n "pre-cleanup"   # Named backup before cleanup
-  
-  # Fix specific issues
-  cch --clean-history --dry-run    # Preview large paste removal
-  cch --clean-dangerous            # Remove risky permissions
-  
-  # Bulk operations across projects
-  cch --add-perm "npm:*" --projects "work/*"    # Pattern matching
-  cch --remove-perm --dangerous --all           # Remove all dangerous
+OPTIONS:
+  -e, --execute              Execute (not dry-run)
+  -f, --force                Skip confirmations
+  --projects <pattern>       Target specific projects
+  --all                      Target all projects
 
 `;
 
   if (!baseCommandsExist) {
-    helpText += `🚀 NEW USER? START HERE:
+    helpText += `NEW USER? Start with:
   cch -dp                    Discover your common permissions
-  cch --audit                Check config health and size
+  cch --audit                Check config health
 
 `;
   }
   
-  helpText += `📋 CORE COMMANDS:
-Setup:
-  install                    Install CCH as MCP server in Claude Code
-  uninstall                  Remove CCH MCP server from Claude Code
-
-Permissions:
-  -lp, --list-permissions    List your permissions
-  -dp, --discover            Discover frequently used permissions  
-  -add, --add-permission     Add permission (smart expansion: "docker" -> "docker:*")
-  -rm, --remove-permission   Remove permission by number
-  -ap, --apply-permissions   Apply permissions to all projects
-
-Config Analysis & Cleanup:
-  --audit                    Full analysis: security, secrets, bloat, performance
-  --audit --fix              Interactive fix mode with confirmations
-  --audit --stats            Quick size/project stats
-  --audit --show-secrets     Display detailed secret detection report
-  --clean-config             Preview cleanup (dry-run by default, safe!)
-  --clean-config -e          Execute the cleanup after preview
-  --clean-config -e --force  Execute without confirmation prompts
-  --clean-config --mask-secrets  Include secret masking in cleanup
-  --mask-secrets-now         🚨 EMERGENCY: Immediate secret masking (force mode)
-  --clean-history            Remove large pastes (100+ lines) from history
-  --clean-dangerous          Remove all dangerous permissions
-
-MCP Tools:
-  -dmc, --discover-mcp       Discover frequently used MCP tools
-  -rmc, --reload-mcp         Reload MCP configuration from claude CLI
-
-Settings Maintenance:
-  fix-settings               Fix Claude settings formatting issues
-  fix-settings --execute     Apply fixes (default is dry-run)
-
-Backup & Restore:
-  -bc, --backup-config       Create backup (auto-timestamped or named)
-  -rc, --restore-config      Restore from backup
-  -n, --name <name>          Name your backup/restore
-
-Bulk Operations:
-  --add-perm <perm>          Add permission to multiple projects
-  --remove-perm <perm>       Remove permission from projects  
-  --add-tool <tool>          Add MCP tool to multiple projects
-  --remove-tool <tool>       Remove MCP tool from projects
+  helpText += `EXAMPLES:
+  # Add permission
+  cch -add "npm"             # Adds npm:* permission
   
-  Target Selection:
-  --projects <pattern>       Project patterns: "work/*", "api-*", "work/*,test/*"
-  --all                      All projects
-  --dangerous                Target dangerous permissions only
-
-Utilities:
-  -c, --config               View config paths and current state
-  --changelog                Recent changes
-  --doctor                   Diagnose and fix issues
-  -dd, --delete-data         Delete all CCH data (with confirmation)
-
-🛠️ OPTIONS:
-  --test, --dry-run          Preview changes without applying
-  -f, --force                Skip confirmation prompts
-  --stats                    Show size/performance statistics
-  -v, --version              Show version
-
-📁 FILE LOCATIONS:
-  Permissions:   ~/.cch/permissions.json
-  Preferences:   ~/.cch/preferences.json  
-  Claude Config: ~/.claude.json (managed by Claude)
-  Backups:       ~/.cch/backups/
-
-💡 INTELLIGENT EXAMPLES:
-Config Health Check:
-  cch --audit --stats        # "Config: 45MB, 12 projects, 3 issues, 🚨 Secrets: 2 high-confidence"
+  # Clean config (always previews first)
+  cch clean                  # Preview what would be cleaned
+  cch clean -e               # Execute after reviewing
   
-Secret Detection:
-  cch --audit --show-secrets # Shows detailed list: "High confidence: AWS keys, GitHub tokens"
-  cch --mask-secrets-now     # "🚨 EMERGENCY SECRET MASKING INITIATED... ✅ COMPLETED!"
-  cch --clean-config --mask-secrets # "Masked 8 secrets, saved backup"
+  # Audit and fix
+  cch --audit --stats        # Quick config health check
+  cch --mask-secrets-now     # Emergency secret removal
   
-Config Cleanup Workflow:
-  cch --clean-config         # Shows preview (dry-run by default)
-  cch --clean-config -e      # Execute the cleanup (after reviewing dry-run)
+  # Backup before changes
+  cch -bc                    # Create timestamped backup
+  cch clean -e               # Then clean with confidence
 
-Permission Management:
-  cch -lp                    # See numbered list
-  cch -add "pytest"          # Auto-expands to "pytest:*"
-  cch -rm 3                  # Remove permission #3
-  cch -ap --test            # Preview changes: "Will add to 5 projects"
-
-Bulk Operations:
-  cch --add-perm "npm:*" --projects "work/*"       # Add npm to work projects
-  cch --remove-perm --dangerous --all              # Security cleanup
-  cch --add-tool github --projects "*-api"         # Add GitHub to API projects
-
-Emergency Cleanup:
-  cch --mask-secrets-now                           # 🚨 CRITICAL: Immediate secret masking
-  cch --clean-config --force                       # Auto-cleanup, no prompts
-  cch --clean-dangerous --force                    # Remove all risky permissions
-
-View Status:
-  cch --changelog           # Recent activity log`;
+For more examples: cch help examples`;
   
   return helpText;
+}
+
+function generateExamplesText(): string {
+  return `Claude Code Helper - Detailed Examples
+
+PERMISSION MANAGEMENT:
+  # List current permissions
+  cch -lp
+  
+  # Add a single permission
+  cch -add "docker"          # Auto-expands to docker:*
+  cch -add "npm run"         # Auto-expands to npm run:*
+  
+  # Remove permission by number
+  cch -lp                    # First, see numbered list
+  cch -rm 3                  # Remove permission #3
+  
+  # Apply permissions to all projects
+  cch -ap                    # Apply your saved permissions
+  cch -ap --test             # Preview what would be applied
+  
+  # Discover frequently used commands
+  cch -dp                    # Analyze your config for patterns
+
+CONFIG CLEANUP:
+  # General cleanup (always previews first)
+  cch clean                  # See what would be cleaned
+  cch clean -e               # Execute after reviewing
+  cch clean -e --force       # Skip confirmation
+  
+  # Clean specific aspects
+  cch clean projects         # Remove empty projects
+  cch clean projects -e      # Execute removal
+  
+  cch clean history          # Clear ALL conversation history
+  cch clean history -e       # Execute (destructive!)
+  
+  # Aggressive cleanup
+  cch clean --aggressive     # More aggressive thresholds
+  cch clean --aggressive -e  # Execute aggressive cleanup
+
+SECURITY & SECRETS:
+  # Full security audit
+  cch --audit                # Complete analysis
+  cch --audit --stats        # Quick summary only
+  cch --audit --show-secrets # Show detected secrets
+  
+  # Emergency secret masking
+  cch --mask-secrets-now     # Immediate action
+  
+  # Clean with secret masking
+  cch --clean-config --mask-secrets     # Preview
+  cch --clean-config --mask-secrets -e  # Execute
+
+BACKUP & RESTORE:
+  # Create backups
+  cch -bc                    # Auto-timestamped backup
+  cch -bc -n "pre-cleanup"   # Named backup
+  
+  # List available backups
+  cch -rc                    # Shows backup list
+  
+  # Restore from backup
+  cch -rc                    # Interactive selection
+  cch -rc -n "pre-cleanup"   # Restore specific backup
+
+BULK OPERATIONS:
+  # Add permission to multiple projects
+  cch --add-perm "npm:*" --projects "work/*"
+  cch --add-perm "docker:*" --all
+  
+  # Remove dangerous permissions
+  cch --remove-perm --dangerous --all
+  
+  # Pattern matching for projects
+  cch --add-perm "git:*" --projects "api-*"
+  cch --add-perm "npm:*" --projects "frontend/*,backend/*"
+
+MCP TOOLS:
+  # Discover frequently used MCP tools
+  cch -dmc
+  
+  # Add MCP tools to projects
+  cch --add-tool github --projects "*-api"
+  cch --add-tool filesystem --all
+  
+  # Reload MCP configuration
+  cch -rmc
+
+SETTINGS MAINTENANCE:
+  # Fix Claude settings formatting
+  cch fix-settings           # Preview fixes
+  cch fix-settings -e        # Apply fixes
+
+TROUBLESHOOTING:
+  # Diagnose issues
+  cch --doctor               # Run diagnostics
+  
+  # View configuration
+  cch -c                     # Show config paths and info
+  cch --changelog            # Recent changes
+  
+  # Emergency cleanup
+  cch --clean-dangerous      # Remove risky permissions
+  cch --clean-history        # Remove large pastes
+
+AI AGENT WORKFLOW:
+  # Typical AI agent commands
+  cch -lp                    # Check current permissions
+  cch --audit --stats        # Quick health check
+  cch clean                  # Preview cleanup
+  cch clean -e               # Execute if needed
+  cch -add "docker"          # Add new permission
+  cch -ap                    # Apply to projects`;
 }
 
 export async function handleCLI(args: string[]): Promise<void> {
@@ -668,6 +699,14 @@ export async function handleCLI(args: string[]): Promise<void> {
       await installToClaudeCode();
     } else if (isUninstall) {
       await uninstallFromClaudeCode();
+    } else if (command === 'help') {
+      // Handle help command with optional subcommands
+      const subcommand = args[1];
+      if (subcommand === 'examples' || subcommand === '--examples') {
+        console.log(generateExamplesText());
+      } else {
+        console.log(generateHelpText(testMode));
+      }
     } else {
       // Show help text
       console.log(generateHelpText(testMode));

@@ -152,7 +152,7 @@ export class SecretDetector {
     },
     {
       name: 'Credit Card',
-      pattern: /(?:4[0-9]{12}(?:[0-9]{3})?|5[1-5][0-9]{14}|3[47][0-9]{13}|3[0-9]{13}|6(?:011|5[0-9]{2})[0-9]{12})/g,
+      pattern: /\b(?:4[0-9]{12}(?:[0-9]{3})?|5[1-5][0-9]{14}|3[47][0-9]{13}|3[0-9]{13}|6(?:011|5[0-9]{2})[0-9]{12})\b/g,
       description: 'Credit card number',
       confidence: 'high',
       category: 'personal'
@@ -331,6 +331,11 @@ export class SecretDetector {
   }
 
   private isValidSecret(value: string, pattern: SecretPattern): boolean {
+    // Special validation for credit cards
+    if (pattern.name === 'Credit Card') {
+      return this.isValidCreditCard(value);
+    }
+    
     // Filter out obvious false positives
     const falsePositives = [
       'example.com',
@@ -346,6 +351,53 @@ export class SecretDetector {
     
     const lowerValue = value.toLowerCase();
     return !falsePositives.some(fp => lowerValue.includes(fp));
+  }
+  
+  private isValidCreditCard(value: string): boolean {
+    // Remove any spaces or dashes
+    const digits = value.replace(/[\s-]/g, '');
+    
+    // Must be 13-19 digits
+    if (!/^\d{13,19}$/.test(digits)) {
+      return false;
+    }
+    
+    // Apply Luhn algorithm
+    let sum = 0;
+    let isEven = false;
+    
+    for (let i = digits.length - 1; i >= 0; i--) {
+      let digit = parseInt(digits[i], 10);
+      
+      if (isEven) {
+        digit *= 2;
+        if (digit > 9) {
+          digit -= 9;
+        }
+      }
+      
+      sum += digit;
+      isEven = !isEven;
+    }
+    
+    // Must pass Luhn check
+    if (sum % 10 !== 0) {
+      return false;
+    }
+    
+    // Additional checks for known test credit card numbers
+    const testCards = [
+      '4111111111111111', // Visa test
+      '5555555555554444', // Mastercard test
+      '378282246310005',  // Amex test
+      '6011111111111117', // Discover test
+    ];
+    
+    if (testCards.includes(digits)) {
+      return false; // Skip test cards
+    }
+    
+    return true;
   }
 
   private extractContext(text: string, index: number): string {
