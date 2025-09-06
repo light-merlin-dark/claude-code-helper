@@ -90,6 +90,23 @@ cch -add "docker"      # Add permission (auto-expands to docker:*)
 cch -ap                # Apply permissions to all projects
 ```
 
+### 🔧 Fix Settings Command (NEW!)
+
+Claude Code recently introduced stricter validation for tool permissions. If you're seeing validation errors in the UI, this command can fix them all at once:
+
+```bash
+# Fix all Claude settings formatting issues
+cch fix-settings       # Preview what will be fixed (dry-run)
+cch fix-settings -e    # Apply fixes to all settings files
+
+# What it fixes:
+# - Tool names must start with uppercase: "git status" → "Git status"
+# - Wildcard syntax: "Bash(command *)" → "Bash(command :*)"
+# - MCP tool capitalization: "mcp__tool__name" → "Mcp__tool__name"
+```
+
+This command scans ALL your Claude settings files recursively and can fix hundreds of validation errors across multiple projects in seconds - something the Claude UI can't do in bulk!
+
 ### Why CLI First?
 
 - **Simple**: Claude runs commands directly - no complex setup

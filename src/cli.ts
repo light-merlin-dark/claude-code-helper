@@ -34,6 +34,9 @@ import { cleanGeneral, cleanProjects, cleanHistory } from './commands/clean-unif
 // Bulk operation commands
 import { bulkAddPermission, bulkRemovePermission, bulkAddTool, bulkRemoveTool } from './commands/bulk';
 
+// Fix settings command
+import { fixSettings } from './commands/fix-settings';
+
 // Core utilities
 import { ensureBaseCommandsExist } from './core/config';
 import { getBaseCommandsPath } from './core/paths';
@@ -183,6 +186,10 @@ Config Analysis & Cleanup:
 MCP Tools:
   -dmc, --discover-mcp       Discover frequently used MCP tools
   -rmc, --reload-mcp         Reload MCP configuration from claude CLI
+
+Settings Maintenance:
+  fix-settings               Fix Claude settings formatting issues
+  fix-settings --execute     Apply fixes (default is dry-run)
 
 Backup & Restore:
   -bc, --backup-config       Create backup (auto-timestamped or named)
@@ -363,6 +370,11 @@ export async function handleCLI(args: string[]): Promise<void> {
     // New unified clean command
     const isClean = command === 'clean';
     const cleanSubcommand = args[1]; // Get subcommand like 'projects' or 'history'
+    
+    // Fix settings command
+    const isFixSettings = command === 'fix-settings';
+    const fixSettingsExecute = options.execute || options.e || false;
+    const fixSettingsVerbose = options.verbose || options.v || false;
     
     // Legacy clean commands (for backward compatibility)
     const isAudit = audit_;
@@ -650,6 +662,8 @@ export async function handleCLI(args: string[]): Promise<void> {
         // Default to general cleanup
         await cleanGeneral({ execute, force: isForce, testMode, aggressive });
       }
+    } else if (isFixSettings) {
+      await fixSettings({ execute: fixSettingsExecute, verbose: fixSettingsVerbose });
     } else if (isInstall) {
       await installToClaudeCode();
     } else if (isUninstall) {

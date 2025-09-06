@@ -2,6 +2,25 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.5.0] - 2025-09-06
+
+### 🔧 New Features
+
+### Added
+- **New `fix-settings` Command**: Automatically fix Claude settings formatting issues
+  - Fixes tool names that must start with uppercase (e.g., "git status" → "Git status")
+  - Corrects wildcard syntax (e.g., "Bash(command *)" → "Bash(command :*)")
+  - Scans all Claude settings files recursively, excluding node_modules
+  - Dry-run by default for safety, use `--execute` to apply fixes
+  - Bulk fixes all issues across multiple projects at once
+  - Essential for fixing validation errors that Claude's UI can't bulk-fix
+
+### Why This Matters
+- Claude Code recently introduced stricter validation for tool permissions
+- The UI doesn't provide bulk fix options for validation errors
+- This command can fix hundreds of issues across dozens of projects in seconds
+- Particularly useful for MCP tool permissions that need proper capitalization
+
 ## [2.4.0] - 2025-08-23
 
 ### 🧹 Unified Clean Command System
