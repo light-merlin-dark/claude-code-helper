@@ -347,10 +347,6 @@ Safe defaults when starting fresh:
 
 MIT License - see [LICENSE](LICENSE) file for details.
 
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
 ---
 
 Built with ❤️ by [@EnchantedRobot](https://twitter.com/EnchantedRobot)
