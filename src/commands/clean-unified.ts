@@ -41,20 +41,35 @@ export async function cleanGeneral(options: CleanOptions = {}): Promise<CleanRes
   
   // Analyze what can be cleaned
   const analysis = await analyzeForGeneralCleanup(config, aggressive);
-  
-  // Display analysis
-  displayGeneralAnalysis(analysis, originalSizeMB);
-  
+
   // Check if cleanup is needed
-  if (analysis.totalSavings < 50000 && analysis.largePastes === 0) {
-    console.log(chalk.green('✨ Your config is already clean!\n'));
+  const hasCleanupItems = analysis.totalSavings >= 50000 || analysis.largePastes > 0;
+
+  if (!hasCleanupItems) {
+    // Config is clean for general cleanup, but still show recommendations
+    console.log(chalk.bold('📊 General Cleanup Analysis\n'));
+    console.log(chalk.cyan('Current state:'));
+    console.log(`  Config size: ${chalk.yellow(originalSizeMB.toFixed(1))} MB`);
+
+    if (analysis.secrets.high > 0) {
+      console.log(`  🚨 High-confidence secrets: ${chalk.red(analysis.secrets.high.toString())}`);
+    }
+
+    console.log(chalk.green('\n✨ No large pastes or dangerous permissions found!\n'));
+
+    // Still show recommendations for secrets or other cleanups
+    showOtherCleanRecommendations(config, originalSize, analysis);
+
     return {
       itemsRemoved: 0,
       projectsModified: 0,
       sizeReduction: 0
     };
   }
-  
+
+  // Display full analysis since there are items to clean
+  displayGeneralAnalysis(analysis, originalSizeMB);
+
   // Show recommendations for other clean commands if applicable
   showOtherCleanRecommendations(config, originalSize, analysis);
   
