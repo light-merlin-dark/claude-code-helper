@@ -56,7 +56,7 @@ export async function cleanGeneral(options: CleanOptions = {}): Promise<CleanRes
   }
   
   // Show recommendations for other clean commands if applicable
-  showOtherCleanRecommendations(config, originalSize);
+  showOtherCleanRecommendations(config, originalSize, analysis);
   
   if (dryRun) {
     console.log(chalk.blue('\nTo execute cleanup: cch clean --execute'));
@@ -343,26 +343,33 @@ function displayGeneralAnalysis(analysis: GeneralAnalysis, currentSizeMB: number
   }
 }
 
-function showOtherCleanRecommendations(config: ClaudeConfig, configSize: number): void {
+function showOtherCleanRecommendations(config: ClaudeConfig, configSize: number, analysis: GeneralAnalysis): void {
   const recommendations: string[] = [];
-  
+
+  // CRITICAL: Check for secrets first - highest priority
+  if (analysis.secrets.high > 0) {
+    recommendations.push(`• ${chalk.red('🚨 CRITICAL:')} Found ${chalk.red(analysis.secrets.high.toString())} high-confidence secrets → Run: ${chalk.red.bold('cch --mask-secrets-now')}`);
+  } else if (analysis.secrets.total > 0) {
+    recommendations.push(`• Found ${chalk.yellow(analysis.secrets.total.toString())} potential secrets → Run: ${chalk.blue('cch --mask-secrets-now')}`);
+  }
+
   // Check for empty projects
-  const emptyProjects = Object.entries(config.projects || {}).filter(([_, project]) => 
+  const emptyProjects = Object.entries(config.projects || {}).filter(([_, project]) =>
     !project?.history || project.history.length === 0
   ).length;
-  
+
   if (emptyProjects > 0) {
     recommendations.push(`• Found ${chalk.yellow(emptyProjects.toString())} empty projects → Run: ${chalk.blue('cch clean projects')}`);
   }
-  
+
   // Check if history is taking up significant space
   const historyEntries = Object.values(config.projects || {})
     .reduce((sum, p) => sum + (p?.history?.length || 0), 0);
-  
+
   if (historyEntries > 500 || configSize > 5000000) { // 500+ entries or > 5MB
     recommendations.push(`• History has ${chalk.yellow(historyEntries.toString())} entries → Consider: ${chalk.blue('cch clean history')}`);
   }
-  
+
   if (recommendations.length > 0) {
     console.log(chalk.cyan('\n💡 Additional cleanup options:'));
     recommendations.forEach(rec => console.log(rec));
