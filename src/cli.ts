@@ -31,6 +31,13 @@ import { cleanHistory as cleanHistoryOld, cleanDangerous } from './commands/clea
 import { cleanConfig } from './commands/config-clean';
 import { cleanGeneral, cleanProjects, cleanHistory } from './commands/clean-unified';
 
+// Cache commands
+import { analyzeCache } from './commands/cache/analyze';
+import { cacheStats } from './commands/cache/stats';
+import { cleanCache } from './commands/cache/clean-cache';
+import { analyzeBlobs } from './commands/cache/analyze-blobs';
+import { cleanBlobs } from './commands/cache/clean-blobs';
+
 // Bulk operation commands
 import { bulkAddPermission, bulkRemovePermission, bulkAddTool, bulkRemoveTool } from './commands/bulk';
 
@@ -126,7 +133,14 @@ COMMANDS:
   cch clean -e               Execute cleanup
   cch clean projects         Remove empty projects
   cch clean history          Clear all history
-  
+
+  cch cache                  Cache quick stats
+  cch cache analyze          Analyze cache usage
+  cch cache stats            Quick cache statistics
+
+  cch blob analyze           Analyze session blobs
+  cch blob clean             Clean blobs from sessions
+
   cch --audit                Analyze config health
   cch --audit --stats        Quick stats
   cch --mask-secrets-now     Emergency secret masking
@@ -204,17 +218,50 @@ CONFIG CLEANUP:
   cch clean                  # See what would be cleaned
   cch clean -e               # Execute after reviewing
   cch clean -e --force       # Skip confirmation
-  
+
   # Clean specific aspects
   cch clean projects         # Remove empty projects
   cch clean projects -e      # Execute removal
-  
+
   cch clean history          # Clear ALL conversation history
   cch clean history -e       # Execute (destructive!)
-  
+
   # Aggressive cleanup
   cch clean --aggressive     # More aggressive thresholds
   cch clean --aggressive -e  # Execute aggressive cleanup
+
+CACHE MANAGEMENT:
+  # Analyze cache usage
+  cch cache                  # Quick cache statistics
+  cch cache stats            # Same as above
+  cch cache analyze          # Detailed cache analysis
+  cch cache analyze --detailed # Show all details
+
+  # Clean cache (always previews first)
+  cch cache clean            # Preview all available cleanup
+  cch cache clean --orphaned # Clean orphaned projects (safest)
+  cch cache clean --stale 60 # Clean projects not accessed in 60 days
+  cch cache clean --large    # Clean sessions >10MB
+  cch cache clean --threshold 5  # Set size threshold in MB
+  cch cache clean --empty    # Remove empty files
+  cch cache clean --all      # Clean all safe + caution items
+  cch cache clean -e         # Execute cleanup (after preview)
+
+BLOB DETECTION & CLEANUP:
+  # Analyze sessions for blobs (images, large data)
+  cch blob analyze           # Analyze all large sessions (>5MB)
+  cch blob analyze --project ldis  # Analyze specific project
+  cch blob analyze --session <id>  # Analyze specific session
+  cch blob analyze --min-size 10   # Only sessions >10MB
+
+  # Clean blobs from sessions (always previews first)
+  cch blob clean             # Preview blob removal from all large sessions
+  cch blob clean --project ldis    # Clean specific project
+  cch blob clean --session <id>    # Clean specific session
+  cch blob clean --sanitize  # Replace blobs with placeholders (safer)
+  cch blob clean --min-size 100    # Only remove blobs >100KB
+  cch blob clean --no-images # Keep images, only remove large text
+  cch blob clean -e          # Execute cleanup (after preview)
 
 SECURITY & SECRETS:
   # Full security audit
@@ -401,6 +448,14 @@ export async function handleCLI(args: string[]): Promise<void> {
     // New unified clean command
     const isClean = command === 'clean';
     const cleanSubcommand = args[1]; // Get subcommand like 'projects' or 'history'
+
+    // Cache commands
+    const isCacheCommand = command === 'cache';
+    const cacheSubcommand = args[1]; // Get subcommand like 'analyze' or 'stats'
+
+    // Blob commands
+    const isBlobCommand = command === 'blob';
+    const blobSubcommand = args[1]; // Get subcommand like 'analyze' or 'clean'
     
     // Fix settings command
     const isFixSettings = command === 'fix-settings';
@@ -695,6 +750,57 @@ export async function handleCLI(args: string[]): Promise<void> {
       }
     } else if (isFixSettings) {
       await fixSettings({ execute: fixSettingsExecute, verbose: fixSettingsVerbose });
+    } else if (isBlobCommand) {
+      // Blob management commands
+      if (blobSubcommand === 'analyze') {
+        await analyzeBlobs({
+          session: options.session as string | undefined,
+          project: options.project as string | undefined,
+          minSize: options['min-size'] ? parseInt(options['min-size'] as string) : 5,
+          testMode
+        });
+      } else if (blobSubcommand === 'clean') {
+        const execute = options.execute || options.e || false;
+        await cleanBlobs({
+          session: options.session as string | undefined,
+          project: options.project as string | undefined,
+          images: options.images !== false,  // Default true
+          largeText: options['large-text'] !== false,  // Default true
+          minSize: options['min-size'] ? parseInt(options['min-size'] as string) * 1024 : undefined,  // Convert KB to bytes
+          sanitize: options.sanitize || false,
+          execute,
+          force: isForce,
+          testMode
+        });
+      } else {
+        // Default to analyze
+        await analyzeBlobs({ testMode });
+      }
+    } else if (isCacheCommand) {
+      // Cache management commands
+      if (cacheSubcommand === 'analyze') {
+        const detailed = options.detailed || false;
+        await analyzeCache({ detailed, testMode });
+      } else if (cacheSubcommand === 'stats') {
+        await cacheStats({ testMode });
+      } else if (cacheSubcommand === 'clean') {
+        const execute = options.execute || options.e || false;
+        await cleanCache({
+          orphaned: options.orphaned || false,
+          stale: options.stale ? parseInt(options.stale as string) : undefined,
+          large: options.large || false,
+          threshold: options.threshold ? parseInt(options.threshold as string) : undefined,
+          debug: options.debug || false,
+          empty: options.empty || false,
+          all: options.all || false,
+          execute,
+          force: isForce,
+          testMode
+        });
+      } else {
+        // Default to showing cache stats
+        await cacheStats({ testMode });
+      }
     } else if (isInstall) {
       await installToClaudeCode();
     } else if (isUninstall) {

@@ -62,7 +62,7 @@ debug.test
 options.test
 dryrun.final
 final.dryrun.test
-blueprints
-chat.md
 .blueprints
-.chat.md
+
+# Shared meta documentation
+@meta
