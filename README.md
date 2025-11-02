@@ -52,6 +52,17 @@ Tell Claude to run commands directly:
 - "Use cch --audit to analyze my config"
 - "Run cch --mask-secrets-now to secure my config"
 
+## Cache Optimization
+
+Claude Code accumulates session transcripts, debug logs, and file history in `~/.claude/`. Over time, this can grow to 1.5GB+. CCH provides intelligent cache management:
+
+- **Analyze cache usage** - See exactly what's using space
+- **Safe cleanup** - Remove orphaned projects, stale sessions, large files
+- **Blob removal** - Extract large images/outputs from sessions (surgical, preserves conversations)
+- **Dry-run first** - All commands preview changes before execution
+
+Typical savings: 100-200MB from orphaned projects, 10-50MB from blob cleanup.
+
 ## Core Commands
 
 **Clean:**
@@ -64,6 +75,21 @@ cch clean help         # See all options
 
 # All commands preview first, use --execute to run
 cch clean -e           # Execute after preview
+```
+
+**Cache Management:**
+
+```bash
+cch cache stats            # Quick cache overview
+cch cache analyze          # Detailed cache breakdown
+cch cache clean --orphaned # Remove orphaned projects
+cch cache clean --stale 60 # Clean projects not accessed in 60 days
+cch cache clean --large    # Clean sessions >10MB
+
+# Blob cleanup (remove images/large outputs from sessions)
+cch blob analyze           # Find sessions with large blobs
+cch blob clean             # Preview blob removal
+cch blob clean --execute   # Remove blobs, preserve conversation
 ```
 
 **Security:**

@@ -2,6 +2,60 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.0.0] - 2025-11-02
+
+### 🗄️ Cache Management System
+
+### Added
+- **Cache Analysis Commands**: Comprehensive cache inspection and diagnostics
+  - `cch cache stats` - Quick overview of cache usage
+  - `cch cache analyze` - Detailed breakdown by component (projects, sessions, debug logs)
+  - Visual progress bars showing size distribution
+  - Identifies orphaned projects, large sessions, and cleanup opportunities
+
+- **Cache Cleanup Operations**: Safe, dry-run-first cleanup strategies
+  - `cch cache clean --orphaned` - Remove projects from deleted directories
+  - `cch cache clean --stale N` - Clean projects not accessed in N days
+  - `cch cache clean --large` - Remove sessions exceeding size threshold
+  - `cch cache clean --empty` - Clean empty session files
+  - All cleanup operations move files to trash (recoverable)
+  - Automatic backups before any modifications
+
+- **Blob Detection & Removal**: Surgical message-level cleanup
+  - `cch blob analyze` - Find sessions containing large images/text
+  - `cch blob clean` - Remove blob messages while preserving conversation flow
+  - Detects base64-encoded images (screenshots, PNGs)
+  - Detects large text outputs (>1MB API responses, logs)
+  - Safety classification (safe >7 days old, caution for recent)
+  - Preserves conversation structure (removes only blob-containing messages)
+  - **Real-world results**: 87MB → 44MB session (49% reduction, 15 messages removed)
+
+- **New Services**:
+  - `CacheAnalyzer` - Full cache structure analysis and recommendations
+  - `CacheCleaner` - Safe cleanup with trash-based removal
+  - `SessionParser` - Parse .jsonl session files, detect blobs
+  - `BlobRemover` - Surgical message removal with backup
+
+### Fixed
+- **Critical: Orphan Detection Bug**: Fixed false positives for projects with hyphens in names
+  - Previously: "ai-engine", "claude-code-helper" incorrectly flagged as orphaned
+  - Root cause: Path decoder converted hyphens to slashes (e.g., "ai-engine" → "ai/engine")
+  - Solution: Read actual `projectPath` from session metadata instead of decoding directory names
+  - Impact: Eliminated all false positives (5 → 0 orphaned projects in testing)
+
+### Enhanced
+- **Cache Visibility**: Users can now see exactly where their 1.5GB+ cache is being used
+- **Safe Cleanup**: All operations preview changes, require --execute flag
+- **Smart Recommendations**: Automatic suggestions based on cache analysis
+- **Typical Savings**: 100-200MB from proper orphan detection, 10-50MB from blob cleanup
+
+### Technical Details
+- Session files now read for actual project path (more reliable than name decoding)
+- .jsonl parsing with line-by-line message analysis
+- Blob detection via regex patterns and size thresholds
+- Backup creation in `.backups/` directories before modification
+- Comprehensive testing on production cache (1.5GB, 2320 sessions, 17 projects)
+
 ## [2.5.2] - 2025-09-06
 
 ### 🔒 Security & Accuracy Improvements

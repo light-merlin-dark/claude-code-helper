@@ -220,15 +220,22 @@ export class CacheAnalyzer {
       return null;
     }
 
-    const projectPath = this.decodeProjectPath(dirName);
+    // Get all session files first
+    const files = await fs.promises.readdir(cachePath);
+    const sessionFiles = files.filter(f => f.endsWith('.jsonl'));
+
+    // Get actual project path from first session file (more reliable than decoding)
+    let projectPath = this.decodeProjectPath(dirName); // Fallback
+    if (sessionFiles.length > 0) {
+      const realPath = await this.getProjectPathFromSession(path.join(cachePath, sessionFiles[0]));
+      if (realPath) {
+        projectPath = realPath;
+      }
+    }
 
     // Check if project still exists
     const isOrphaned = !fs.existsSync(projectPath);
     const isActive = process.cwd() === projectPath;
-
-    // Get all session files
-    const files = await fs.promises.readdir(cachePath);
-    const sessionFiles = files.filter(f => f.endsWith('.jsonl'));
 
     const sessions = await Promise.all(
       sessionFiles.map(f => this.analyzeSessionFile(cachePath, f, this.getProjectName(dirName)))
@@ -500,8 +507,41 @@ export class CacheAnalyzer {
   /**
    * Decode project path from cache directory name
    */
+  /**
+   * Get the actual project path from a session file
+   * This is more reliable than decoding the directory name,
+   * especially for projects with hyphens in their names.
+   */
+  private async getProjectPathFromSession(sessionFilePath: string): Promise<string | null> {
+    try {
+      const content = await fs.promises.readFile(sessionFilePath, 'utf-8');
+      const lines = content.split('\n').slice(0, 10); // Check first 10 lines
+
+      for (const line of lines) {
+        if (!line) continue;
+        try {
+          const json = JSON.parse(line);
+          const projectPath = json.projectPath || json.project_path || json.cwd;
+          if (projectPath) {
+            return projectPath;
+          }
+        } catch (e) {
+          // Skip malformed lines
+          continue;
+        }
+      }
+
+      return null;
+    } catch (error) {
+      // If we can't read/parse, return null to fall back to decoding
+      return null;
+    }
+  }
+
   private decodeProjectPath(encodedName: string): string {
     // "-Users-merlin--dev-ldis" -> "/Users/merlin/_dev/ldis"
+    // NOTE: This has issues with hyphens in project names (e.g., "ai-engine" becomes "ai/engine")
+    // We try to read from session files first (see getProjectPathFromSession)
     return encodedName
       .replace(/^-/, '/')
       .replace(/--/g, '/_')
