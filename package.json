@@ -1,6 +1,6 @@
 {
   "name": "@light-merlin-dark/claude-code-helper",
-  "version": "3.1.0",
+  "version": "3.1.1",
   "description": "Security and cleanup toolkit for Claude Code. Auto secret detection, cache optimization, 99.4% config reduction. CLI & MCP Server.",
   "main": "dist/index.js",
   "bin": {
