@@ -2,6 +2,48 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.1.0] - 2025-11-02
+
+### 🔐 Cache Security - Secret Detection & Masking
+
+### Added
+- **Cache-Aware Secret Detection**: Comprehensive secret scanning across all Claude Code cache locations
+  - `cch cache scan-secrets` - Scan all cache for exposed secrets (API keys, tokens, credentials)
+  - Scans session files (.jsonl) - 2,300+ conversation transcripts
+  - Scans shell snapshots - Command history with potential env vars and auth tokens
+  - Scans debug logs - Error traces that may contain leaked credentials
+  - Scans file history - Old versions of config files with secrets
+  - Real-time progress reporting during scan
+  - Breakdown by location type (sessions, shell-snapshots, debug-logs, file-history)
+  - Confidence levels (high/medium/low) for detected secrets
+
+- **Secret Masking with Backup**: Safe secret masking with automatic backups
+  - `cch cache mask-secrets` - Preview secret masking (dry-run mode)
+  - `cch cache mask-secrets --execute` - Mask secrets in cache files
+  - Creates timestamped backups before any modifications
+  - Preserves first/last 3 characters for identification
+  - Detailed reporting of masked secrets and modified files
+
+- **Enhanced Secret Detection Patterns**:
+  - AWS Access Keys and Secret Keys
+  - GitHub Personal Access Tokens
+  - OpenAI API Keys
+  - Anthropic Claude API Keys
+  - Stripe API Keys
+  - Google API Keys
+  - JWT Tokens
+  - Database Connection Strings
+  - RSA/SSH Private Keys
+  - Bearer Tokens
+  - Credit Card Numbers (with Luhn validation)
+  - Email Addresses, Phone Numbers, SSNs
+
+### Security Impact
+- **Critical**: Addresses previously undetected secret exposure in Claude Code cache
+- **Scope**: Scans ~1.5GB of cache data across 4 major locations
+- **Protection**: Prevents accidental exposure of credentials in conversation history
+- **Safety**: All masking operations create backups and support dry-run preview
+
 ## [3.0.0] - 2025-11-02
 
 ### 🗄️ Cache Management System

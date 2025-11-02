@@ -37,6 +37,8 @@ import { cacheStats } from './commands/cache/stats';
 import { cleanCache } from './commands/cache/clean-cache';
 import { analyzeBlobs } from './commands/cache/analyze-blobs';
 import { cleanBlobs } from './commands/cache/clean-blobs';
+import { scanCacheSecrets } from './commands/cache/scan-secrets';
+import { maskCacheSecrets } from './commands/cache/mask-secrets';
 
 // Bulk operation commands
 import { bulkAddPermission, bulkRemovePermission, bulkAddTool, bulkRemoveTool } from './commands/bulk';
@@ -137,6 +139,8 @@ COMMANDS:
   cch cache                  Cache quick stats
   cch cache analyze          Analyze cache usage
   cch cache stats            Quick cache statistics
+  cch cache scan-secrets     Scan cache for secrets
+  cch cache mask-secrets     Mask secrets in cache
 
   cch blob analyze           Analyze session blobs
   cch blob clean             Clean blobs from sessions
@@ -246,6 +250,15 @@ CACHE MANAGEMENT:
   cch cache clean --empty    # Remove empty files
   cch cache clean --all      # Clean all safe + caution items
   cch cache clean -e         # Execute cleanup (after preview)
+
+CACHE SECURITY:
+  # Scan cache for exposed secrets
+  cch cache scan-secrets     # Scan all cache locations for secrets
+                             # (sessions, shell-snapshots, debug logs, file-history)
+
+  # Mask secrets in cache (always previews first)
+  cch cache mask-secrets     # Preview what will be masked
+  cch cache mask-secrets -e  # Execute masking (creates backups)
 
 BLOB DETECTION & CLEANUP:
   # Analyze sessions for blobs (images, large data)
@@ -797,6 +810,11 @@ export async function handleCLI(args: string[]): Promise<void> {
           force: isForce,
           testMode
         });
+      } else if (cacheSubcommand === 'scan-secrets') {
+        await scanCacheSecrets({ testMode });
+      } else if (cacheSubcommand === 'mask-secrets') {
+        const execute = options.execute || options.e || false;
+        await maskCacheSecrets({ execute, testMode });
       } else {
         // Default to showing cache stats
         await cacheStats({ testMode });
