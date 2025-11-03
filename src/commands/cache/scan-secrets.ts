@@ -17,24 +17,26 @@ export async function scanCacheSecrets(options: ScanSecretsOptions = {}): Promis
 
     const detector = new SecretDetector();
 
-    // Show progress
-    console.log('Scanning cache locations...\n');
-
-    let lastProgressOutput = '';
     const result = await detector.scanCache({
       progressCallback: (p) => {
-        const progressMsg = `${p.stage}: ${p.current}/${p.total} (${p.percentage}%)`;
-        if (progressMsg !== lastProgressOutput) {
-          process.stdout.write(`\r${' '.repeat(lastProgressOutput.length)}\r${progressMsg}`);
-          lastProgressOutput = progressMsg;
+        // Create progress bar
+        const barWidth = 20;
+        const filled = Math.floor((p.percentage / 100) * barWidth);
+        const empty = barWidth - filled;
+        const bar = '█'.repeat(filled) + '░'.repeat(empty);
+
+        // Format: [████████░░] Sessions: 1234/2358 (52%)
+        const progressMsg = `[${bar}] ${p.stage}: ${p.current}/${p.total} (${p.percentage}%)`;
+
+        // Overwrite current line
+        process.stdout.write(`\r${progressMsg}`);
+
+        // Add newline when stage completes
+        if (p.current === p.total) {
+          process.stdout.write('\n');
         }
       }
     });
-
-    // Clear progress line
-    if (lastProgressOutput) {
-      process.stdout.write(`\r${' '.repeat(lastProgressOutput.length)}\r`);
-    }
 
     // Display results
     if (result.totalSecrets === 0) {

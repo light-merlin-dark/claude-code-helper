@@ -568,20 +568,8 @@ export class SecretDetector {
     const projectDirs = await fs.promises.readdir(projectsDir, { withFileTypes: true });
     const validProjects = projectDirs.filter(d => d.isDirectory());
 
-    let processedFiles = 0;
-    let totalFiles = 0;
-
-    // Count total files first
-    for (const projectDir of validProjects) {
-      try {
-        const projectPath = path.join(projectsDir, projectDir.name);
-        const files = await fs.promises.readdir(projectPath);
-        totalFiles += files.filter(f => f.endsWith('.jsonl')).length;
-      } catch (error) {
-        // Skip inaccessible directories
-        continue;
-      }
-    }
+    // Collect all files to scan
+    const filesToScan: Array<{ filePath: string; projectName: string; sessionFile: string }> = [];
 
     for (const projectDir of validProjects) {
       try {
@@ -590,44 +578,73 @@ export class SecretDetector {
         const sessionFiles = files.filter(f => f.endsWith('.jsonl'));
 
         for (const sessionFile of sessionFiles) {
-          const filePath = path.join(projectPath, sessionFile);
-
-          try {
-            const content = await fs.promises.readFile(filePath, 'utf-8');
-
-            // Scan each line (each message)
-            const lines = content.split('\n');
-            for (let i = 0; i < lines.length; i++) {
-              if (!lines[i]) continue;
-
-              const secrets = this.scanText(lines[i], `${projectDir.name}/${sessionFile}:${i + 1}`);
-              if (secrets.length > 0) {
-                results.push({
-                  location: filePath,
-                  type: 'session',
-                  secrets,
-                  lineNumber: i + 1
-                });
-              }
-            }
-          } catch (error) {
-            // Skip unreadable files
-          }
-
-          processedFiles++;
-          if (progressCallback && processedFiles % 10 === 0) {
-            progressCallback({
-              stage: 'Scanning session files',
-              current: processedFiles,
-              total: totalFiles,
-              percentage: Math.round((processedFiles / totalFiles) * 100)
-            });
-          }
+          filesToScan.push({
+            filePath: path.join(projectPath, sessionFile),
+            projectName: projectDir.name,
+            sessionFile
+          });
         }
       } catch (error) {
         // Skip inaccessible directories
         continue;
       }
+    }
+
+    const totalFiles = filesToScan.length;
+    let processedFiles = 0;
+
+    // Process files in parallel chunks
+    const CHUNK_SIZE = 50;
+    for (let i = 0; i < filesToScan.length; i += CHUNK_SIZE) {
+      const chunk = filesToScan.slice(i, i + CHUNK_SIZE);
+
+      const chunkResults = await Promise.all(
+        chunk.map(async ({ filePath, projectName, sessionFile }) => {
+          try {
+            const stats = await fs.promises.stat(filePath);
+            // Skip tiny files
+            if (stats.size < 100) return null;
+
+            const content = await fs.promises.readFile(filePath, 'utf-8');
+
+            // Scan entire file content at once instead of line-by-line
+            const secrets = this.scanText(content, `${projectName}/${sessionFile}`);
+
+            if (secrets.length > 0) {
+              return {
+                location: filePath,
+                type: 'session' as const,
+                secrets
+              };
+            }
+          } catch (error) {
+            // Skip unreadable files
+          }
+          return null;
+        })
+      );
+
+      results.push(...chunkResults.filter(r => r !== null) as CacheSecretResult[]);
+
+      processedFiles += chunk.length;
+      if (progressCallback && processedFiles % 100 === 0) {
+        progressCallback({
+          stage: 'Sessions',
+          current: processedFiles,
+          total: totalFiles,
+          percentage: Math.round((processedFiles / totalFiles) * 100)
+        });
+      }
+    }
+
+    // Final progress update
+    if (progressCallback && processedFiles > 0) {
+      progressCallback({
+        stage: 'Sessions',
+        current: totalFiles,
+        total: totalFiles,
+        percentage: 100
+      });
     }
 
     return results;
@@ -646,37 +663,59 @@ export class SecretDetector {
     const files = await fs.promises.readdir(snapshotsDir);
     const results: CacheSecretResult[] = [];
     const totalFiles = files.length;
+    let processedFiles = 0;
 
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
-      const filePath = path.join(snapshotsDir, file);
+    // Process files in parallel chunks
+    const CHUNK_SIZE = 50;
+    for (let i = 0; i < files.length; i += CHUNK_SIZE) {
+      const chunk = files.slice(i, i + CHUNK_SIZE);
 
-      try {
-        const stats = await fs.promises.stat(filePath);
-        if (!stats.isFile()) continue;
+      const chunkResults = await Promise.all(
+        chunk.map(async (file) => {
+          const filePath = path.join(snapshotsDir, file);
 
-        const content = await fs.promises.readFile(filePath, 'utf-8');
-        const secrets = this.scanText(content, `shell-snapshots/${file}`);
+          try {
+            const stats = await fs.promises.stat(filePath);
+            if (!stats.isFile() || stats.size < 100) return null;
 
-        if (secrets.length > 0) {
-          results.push({
-            location: filePath,
-            type: 'shell-snapshot',
-            secrets
-          });
-        }
-      } catch (error) {
-        // Skip unreadable files
-      }
+            const content = await fs.promises.readFile(filePath, 'utf-8');
+            const secrets = this.scanText(content, `shell-snapshots/${file}`);
 
-      if (progressCallback && (i + 1) % 10 === 0) {
+            if (secrets.length > 0) {
+              return {
+                location: filePath,
+                type: 'shell-snapshot' as const,
+                secrets
+              };
+            }
+          } catch (error) {
+            // Skip unreadable files
+          }
+          return null;
+        })
+      );
+
+      results.push(...chunkResults.filter(r => r !== null) as CacheSecretResult[]);
+
+      processedFiles += chunk.length;
+      if (progressCallback && processedFiles % 100 === 0) {
         progressCallback({
-          stage: 'Scanning shell snapshots',
-          current: i + 1,
+          stage: 'Shell Snapshots',
+          current: processedFiles,
           total: totalFiles,
-          percentage: Math.round(((i + 1) / totalFiles) * 100)
+          percentage: Math.round((processedFiles / totalFiles) * 100)
         });
       }
+    }
+
+    // Final progress update
+    if (progressCallback && processedFiles > 0) {
+      progressCallback({
+        stage: 'Shell Snapshots',
+        current: totalFiles,
+        total: totalFiles,
+        percentage: 100
+      });
     }
 
     return results;
@@ -708,38 +747,61 @@ export class SecretDetector {
       })
     );
 
-    // Filter out nulls and non-files, then sort by mtime
+    // Filter out nulls, non-files, and tiny files, then sort by mtime
     const validFiles = fileStats
-      .filter((f): f is NonNullable<typeof f> => f !== null && f.stats.isFile())
+      .filter((f): f is NonNullable<typeof f> => f !== null && f.stats.isFile() && f.stats.size >= 100)
       .sort((a, b) => b.stats.mtime.getTime() - a.stats.mtime.getTime())
       .slice(0, 100); // Scan 100 most recent logs
 
-    for (let i = 0; i < validFiles.length; i++) {
-      const file = validFiles[i];
+    const totalFiles = validFiles.length;
+    let processedFiles = 0;
 
-      try {
-        const content = await fs.promises.readFile(file.path, 'utf-8');
-        const secrets = this.scanText(content, `debug/${file.name}`);
+    // Process files in parallel chunks
+    const CHUNK_SIZE = 50;
+    for (let i = 0; i < validFiles.length; i += CHUNK_SIZE) {
+      const chunk = validFiles.slice(i, i + CHUNK_SIZE);
 
-        if (secrets.length > 0) {
-          results.push({
-            location: file.path,
-            type: 'debug-log',
-            secrets
-          });
-        }
-      } catch (error) {
-        // Skip unreadable files
-      }
+      const chunkResults = await Promise.all(
+        chunk.map(async (file) => {
+          try {
+            const content = await fs.promises.readFile(file.path, 'utf-8');
+            const secrets = this.scanText(content, `debug/${file.name}`);
 
-      if (progressCallback && (i + 1) % 10 === 0) {
+            if (secrets.length > 0) {
+              return {
+                location: file.path,
+                type: 'debug-log' as const,
+                secrets
+              };
+            }
+          } catch (error) {
+            // Skip unreadable files
+          }
+          return null;
+        })
+      );
+
+      results.push(...chunkResults.filter(r => r !== null) as CacheSecretResult[]);
+
+      processedFiles += chunk.length;
+      if (progressCallback && processedFiles % 100 === 0) {
         progressCallback({
-          stage: 'Scanning debug logs',
-          current: i + 1,
-          total: validFiles.length,
-          percentage: Math.round(((i + 1) / validFiles.length) * 100)
+          stage: 'Debug Logs',
+          current: processedFiles,
+          total: totalFiles,
+          percentage: Math.round((processedFiles / totalFiles) * 100)
         });
       }
+    }
+
+    // Final progress update
+    if (progressCallback && processedFiles > 0) {
+      progressCallback({
+        stage: 'Debug Logs',
+        current: totalFiles,
+        total: totalFiles,
+        percentage: 100
+      });
     }
 
     return results;
@@ -758,37 +820,59 @@ export class SecretDetector {
     const files = await fs.promises.readdir(historyDir);
     const results: CacheSecretResult[] = [];
     const totalFiles = files.length;
+    let processedFiles = 0;
 
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
-      const filePath = path.join(historyDir, file);
+    // Process files in parallel chunks
+    const CHUNK_SIZE = 50;
+    for (let i = 0; i < files.length; i += CHUNK_SIZE) {
+      const chunk = files.slice(i, i + CHUNK_SIZE);
 
-      try {
-        const stats = await fs.promises.stat(filePath);
-        if (!stats.isFile()) continue;
+      const chunkResults = await Promise.all(
+        chunk.map(async (file) => {
+          const filePath = path.join(historyDir, file);
 
-        const content = await fs.promises.readFile(filePath, 'utf-8');
-        const secrets = this.scanText(content, `file-history/${file}`);
+          try {
+            const stats = await fs.promises.stat(filePath);
+            if (!stats.isFile() || stats.size < 100) return null;
 
-        if (secrets.length > 0) {
-          results.push({
-            location: filePath,
-            type: 'file-history',
-            secrets
-          });
-        }
-      } catch (error) {
-        // Skip unreadable files
-      }
+            const content = await fs.promises.readFile(filePath, 'utf-8');
+            const secrets = this.scanText(content, `file-history/${file}`);
 
-      if (progressCallback && (i + 1) % 100 === 0) {
+            if (secrets.length > 0) {
+              return {
+                location: filePath,
+                type: 'file-history' as const,
+                secrets
+              };
+            }
+          } catch (error) {
+            // Skip unreadable files
+          }
+          return null;
+        })
+      );
+
+      results.push(...chunkResults.filter(r => r !== null) as CacheSecretResult[]);
+
+      processedFiles += chunk.length;
+      if (progressCallback && processedFiles % 100 === 0) {
         progressCallback({
-          stage: 'Scanning file history',
-          current: i + 1,
+          stage: 'File History',
+          current: processedFiles,
           total: totalFiles,
-          percentage: Math.round(((i + 1) / totalFiles) * 100)
+          percentage: Math.round((processedFiles / totalFiles) * 100)
         });
       }
+    }
+
+    // Final progress update
+    if (progressCallback && processedFiles > 0) {
+      progressCallback({
+        stage: 'File History',
+        current: totalFiles,
+        total: totalFiles,
+        percentage: 100
+      });
     }
 
     return results;
